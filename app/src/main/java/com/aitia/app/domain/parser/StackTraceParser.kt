@@ -38,6 +38,15 @@ object StackTraceParser {
 
         val lines = rawText.lines()
 
+        val frameworkPrefixes = listOf(
+            "android.app.", "android.os.", "android.view.", "android.widget.",
+            "java.lang.", "java.util.", "com.android.internal.", "dalvik.system.",
+            "androidx.activity.", "androidx.fragment.app."
+        )
+
+        var candidateFrameworkFile: String? = null
+        var candidateFrameworkLine: String? = null
+
         for (line in lines) {
             val trimmed = line.trim()
 
@@ -55,27 +64,35 @@ object StackTraceParser {
             }
 
             // Try to match standard stack trace line "at com.example.Foo.bar(Foo.kt:42)"
-            if (foundFile == null) {
-                val stackMatch = STACK_LINE_REGEX.find(trimmed)
-                if (stackMatch != null) {
-                    foundFile = stackMatch.groupValues[3].trim()
-                    val lineNum = stackMatch.groupValues.getOrNull(4)?.trim()
-                    if (!lineNum.isNullOrBlank()) {
+            val stackMatch = STACK_LINE_REGEX.find(trimmed)
+            if (stackMatch != null) {
+                val className = stackMatch.groupValues[1].trim()
+                val fileName = stackMatch.groupValues[3].trim()
+                val lineNum = stackMatch.groupValues.getOrNull(4)?.trim()
+
+                val isFramework = frameworkPrefixes.any { className.startsWith(it) }
+                if (!isFramework) {
+                    if (foundFile == null) {
+                        foundFile = fileName
                         foundLine = lineNum
                     }
-                } else {
-                    // Fallback to "Foo.kt:42"
-                    val shortMatch = SHORT_STACK_REGEX.find(trimmed)
-                    if (shortMatch != null) {
-                        foundFile = shortMatch.groupValues[1].trim()
-                        foundLine = shortMatch.groupValues[2].trim()
-                    }
+                } else if (candidateFrameworkFile == null) {
+                    candidateFrameworkFile = fileName
+                    candidateFrameworkLine = lineNum
+                }
+            } else {
+                // Fallback to "Foo.kt:42"
+                val shortMatch = SHORT_STACK_REGEX.find(trimmed)
+                if (shortMatch != null && foundFile == null) {
+                    foundFile = shortMatch.groupValues[1].trim()
+                    foundLine = shortMatch.groupValues[2].trim()
                 }
             }
+        }
 
-            if (foundException != null && foundFile != null && foundLine != null) {
-                break
-            }
+        if (foundFile == null && candidateFrameworkFile != null) {
+            foundFile = candidateFrameworkFile
+            foundLine = candidateFrameworkLine
         }
 
         val suggestedTitle = when {

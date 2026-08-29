@@ -31,6 +31,7 @@ class UserPreferencesRepository(private val context: Context) {
         val ACTIVE_SESSION_ID = longPreferencesKey("active_session_id")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val QUICK_CAPTURE_DRAFT = stringPreferencesKey("quick_capture_draft")
+        val SHAKE_TO_REPORT = booleanPreferencesKey("shake_to_report")
     }
 
     val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
@@ -51,7 +52,8 @@ class UserPreferencesRepository(private val context: Context) {
             defaultProjectId = preferences[PreferenceKeys.DEFAULT_PROJECT_ID],
             activeTestingSessionId = preferences[PreferenceKeys.ACTIVE_SESSION_ID],
             hasCompletedOnboarding = preferences[PreferenceKeys.ONBOARDING_COMPLETED] ?: false,
-            quickCaptureDraft = preferences[PreferenceKeys.QUICK_CAPTURE_DRAFT] ?: ""
+            quickCaptureDraft = preferences[PreferenceKeys.QUICK_CAPTURE_DRAFT] ?: "",
+            isShakeToReportEnabled = preferences[PreferenceKeys.SHAKE_TO_REPORT] ?: false
         )
     }
 
@@ -118,6 +120,12 @@ class UserPreferencesRepository(private val context: Context) {
     suspend fun setQuickCaptureDraft(draft: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.QUICK_CAPTURE_DRAFT] = draft
+        }
+    }
+
+    suspend fun setShakeToReport(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SHAKE_TO_REPORT] = enabled
         }
     }
 }

@@ -95,6 +95,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Shake to Report Sensor Listener
+            DisposableEffect(preferences.isShakeToReportEnabled) {
+                if (preferences.isShakeToReportEnabled) {
+                    val detector = com.aitia.app.util.ShakeDetector(this@MainActivity) {
+                        _quickCaptureTrigger.value = true
+                    }
+                    detector.start()
+                    onDispose {
+                        detector.stop()
+                    }
+                } else {
+                    onDispose {}
+                }
+            }
+
             val triggerQuickCapture by _quickCaptureTrigger.collectAsState()
             
             // Consume trigger

@@ -218,4 +218,31 @@ class IssueDetailViewModel(
         val current = uiState.value.issue ?: return ""
         return backupExportRepository.generateMarkdownReport(listOf(current), current.projectName ?: "Aitia Bug Report")
     }
+
+    fun harvestLogcatToTechnicalDetails() {
+        val current = uiState.value.issue ?: return
+        viewModelScope.launch {
+            val logs = com.aitia.app.util.LogcatHarvester.harvestRecentLogs(100)
+            val updatedTech = if (current.technicalDetails.isBlank()) logs else "${current.technicalDetails}\n\n// --- Logcat Dump ---\n$logs"
+            val parsed = StackTraceParser.parse(logs)
+            val updated = current.copy(
+                technicalDetails = updatedTech,
+                exceptionType = parsed.exceptionType ?: current.exceptionType,
+                errorMessage = parsed.errorMessage ?: current.errorMessage,
+                sourceFile = parsed.sourceFile ?: current.sourceFile,
+                sourceLine = parsed.sourceLine ?: current.sourceLine
+            )
+            issueRepository.saveIssue(updated)
+        }
+    }
+
+    fun appendDeviceVitals(context: android.content.Context) {
+        val current = uiState.value.issue ?: return
+        val vitals = com.aitia.app.util.DeviceVitalsHarvester.capture(context)
+        val vitalsMd = com.aitia.app.util.DeviceVitalsHarvester.formatMarkdown(vitals)
+        val updatedTech = if (current.technicalDetails.isBlank()) vitalsMd else "$vitalsMd\n\n${current.technicalDetails}"
+        viewModelScope.launch {
+            issueRepository.saveIssue(current.copy(technicalDetails = updatedTech))
+        }
+    }
 }

@@ -86,6 +86,20 @@ dependencies {
     // Biometrics
     implementation(libs.androidx.biometric)
 
+    // CameraX
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.video)
+
+    // ML Kit Vision
+    implementation(libs.google.mlkit.text.recognition)
+    implementation(libs.google.mlkit.barcode.scanning)
+
+    // ZXing QR Code Engine
+    implementation(libs.zxing.core)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

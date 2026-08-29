@@ -295,7 +295,43 @@ fun SettingsScreen(
                 }
             }
 
-            // 3. Backup & Export
+            // 3. QA Sensor Tools & Quick Capture
+            item {
+                SettingsSectionCard(title = "QA Sensors & Fast Capture") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Shake to Report Bug",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Firmly shake physical device to trigger Quick Capture popup instantly while testing",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Switch(
+                                checked = prefs.isShakeToReportEnabled,
+                                onCheckedChange = { isChecked ->
+                                    haptic.lightTap()
+                                    viewModel.setShakeToReport(isChecked)
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF00FF88))
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Backup & Export
             item {
                 SettingsSectionCard(title = "Data Backup & Export") {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

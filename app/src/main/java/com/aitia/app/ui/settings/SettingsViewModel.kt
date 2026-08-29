@@ -86,6 +86,12 @@ class SettingsViewModel(
         }
     }
 
+    fun setShakeToReport(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setShakeToReport(enabled)
+        }
+    }
+
     fun seedSampleData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isSeeding.value = true

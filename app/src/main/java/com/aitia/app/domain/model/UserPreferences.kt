@@ -77,5 +77,6 @@ data class UserPreferences(
     val defaultProjectId: Long? = null,
     val activeTestingSessionId: Long? = null,
     val hasCompletedOnboarding: Boolean = false,
-    val quickCaptureDraft: String = ""
+    val quickCaptureDraft: String = "",
+    val isShakeToReportEnabled: Boolean = false
 )

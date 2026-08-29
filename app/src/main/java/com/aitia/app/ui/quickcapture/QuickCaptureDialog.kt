@@ -25,12 +25,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Save
+import com.aitia.app.ui.components.AitiaCameraCaptureDialog
+import com.aitia.app.ui.components.ScanStackTraceDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -86,8 +90,10 @@ fun QuickCaptureBottomSheet(
     val focusRequester = remember { FocusRequester() }
     val haptic = rememberHapticFeedback()
     val extendedColors = LocalExtendedColors.current
-
     var projectDropdownExpanded by remember { mutableStateOf(false) }
+    var showCameraDialog by remember { mutableStateOf(false) }
+    var showOcrDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         // Auto focus title input when modal opens
@@ -129,12 +135,28 @@ fun QuickCaptureBottomSheet(
                     )
                 }
 
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showCameraDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Camera Snap with Markup",
+                            tint = Color(0xFF00FF88)
+                        )
+                    }
+                    IconButton(onClick = { showOcrDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.DocumentScanner,
+                            contentDescription = "Scan Terminal Logs",
+                            tint = Color(0xFF00F0FF)
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -397,6 +419,37 @@ fun QuickCaptureBottomSheet(
                     )
                 }
             }
+        }
+
+        if (showCameraDialog) {
+            AitiaCameraCaptureDialog(
+                onDismiss = { showCameraDialog = false },
+                onImageCaptured = { capturedFile ->
+                    showCameraDialog = false
+                    if (uiState.title.isBlank()) {
+                        viewModel.onTitleChange("Camera Snapshot: ${capturedFile.nameWithoutExtension}")
+                    }
+                }
+            )
+        }
+
+        if (showOcrDialog) {
+            ScanStackTraceDialog(
+                onDismiss = { showOcrDialog = false },
+                onApplyParsedStackTrace = { parsed, _ ->
+                    showOcrDialog = false
+                    val title = if (!parsed.exceptionType.isNullOrBlank()) {
+                        "${parsed.exceptionType}: ${parsed.errorMessage ?: ""}".take(80)
+                    } else {
+                        "Scanned Crash in ${parsed.sourceFile ?: "Application"}"
+                    }
+                    viewModel.onTitleChange(title)
+                    viewModel.onTypeSelected(IssueType.CRASH)
+                    if (!parsed.sourceFile.isNullOrBlank()) {
+                        viewModel.onScreenAreaChange("${parsed.sourceFile}:${parsed.sourceLine ?: ""}")
+                    }
+                }
+            )
         }
     }
 }

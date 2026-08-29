@@ -96,13 +96,27 @@ import com.aitia.app.domain.model.Priority
 import com.aitia.app.domain.model.RelationshipType
 import com.aitia.app.domain.model.Tag
 import com.aitia.app.domain.model.TimelineEvent
+import com.aitia.app.domain.similarity.PreviousFixMatcher
+import com.aitia.app.ui.components.AitiaCameraCaptureDialog
+import com.aitia.app.ui.components.AudioGlitchRecorderDialog
+import com.aitia.app.ui.components.BarcodeScannerDialog
+import com.aitia.app.ui.components.BugCardShareDialog
 import com.aitia.app.ui.components.ChecklistComponent
 import com.aitia.app.ui.components.CodeViewer
+import com.aitia.app.ui.components.CrossDeviceVerificationMatrix
+import com.aitia.app.ui.components.DeviceVitalsCard
 import com.aitia.app.ui.components.EmptyStateView
+import com.aitia.app.ui.components.GitCommitDialog
+import com.aitia.app.ui.components.NetworkCurlInspectorDialog
+import com.aitia.app.ui.components.PreviousFixBanner
 import com.aitia.app.ui.components.PriorityBadge
+import com.aitia.app.ui.components.RootCauseDiagnosisCard
+import com.aitia.app.ui.components.ScanStackTraceDialog
 import com.aitia.app.ui.components.StatusBadge
 import com.aitia.app.ui.components.StatusFlowBar
 import com.aitia.app.ui.components.TypeBadge
+import com.aitia.app.ui.components.VisualRegressionCompareDialog
+import com.aitia.app.ui.components.VoiceReproStepsDialog
 import com.aitia.app.ui.theme.AitiaBlue
 import com.aitia.app.ui.theme.AitiaPurple
 import com.aitia.app.ui.theme.LocalExtendedColors
@@ -111,6 +125,7 @@ import com.aitia.app.ui.theme.StatusFixed
 import com.aitia.app.util.DateFormatter
 import com.aitia.app.util.ShareHelper
 import com.aitia.app.util.rememberHapticFeedback
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -146,6 +161,18 @@ fun IssueDetailScreen(
     var showAddTagDialog by remember { mutableStateOf(false) }
     var viewingAttachment by remember { mutableStateOf<Attachment?>(null) }
     var showResolutionPrompt by remember { mutableStateOf(false) }
+
+    // Advanced Developer & QA Real-Life Features Dialog States
+    var showCameraCaptureDialog by remember { mutableStateOf(false) }
+    var showScanOcrDialog by remember { mutableStateOf(false) }
+    var showVisualRegressionDialog by remember { mutableStateOf(false) }
+    var regressionActualImageFile by remember { mutableStateOf<File?>(null) }
+    var showVoiceStepsDialog by remember { mutableStateOf(false) }
+    var showAudioRecorderDialog by remember { mutableStateOf(false) }
+    var showCurlInspectorDialog by remember { mutableStateOf(false) }
+    var showGitCommitDialog by remember { mutableStateOf(false) }
+    var showBarcodeScannerDialog by remember { mutableStateOf(false) }
+    var showBugCardShareDialog by remember { mutableStateOf(false) }
 
     // Native file / media pickers
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -188,6 +215,10 @@ fun IssueDetailScreen(
         return
     }
 
+    val matchedFixes = remember(issue, uiState.allIssues) {
+        PreviousFixMatcher.findSimilarResolvedFixes(issue, uiState.allIssues)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -204,6 +235,18 @@ fun IssueDetailScreen(
                     }
                 },
                 actions = {
+                    // Export Visual Bug Card (PNG)
+                    IconButton(onClick = {
+                        haptic.lightTap()
+                        showBugCardShareDialog = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Export Bug Card",
+                            tint = Color(0xFF00FF88)
+                        )
+                    }
+
                     // Pin toggle
                     IconButton(onClick = {
                         haptic.lightTap()
@@ -224,19 +267,6 @@ fun IssueDetailScreen(
                         Icon(
                             imageVector = if (issue.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
                             contentDescription = "Archive",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Share Markdown Report
-                    IconButton(onClick = {
-                        haptic.lightTap()
-                        val report = viewModel.generateMarkdownReport()
-                        ShareHelper.shareText(context, report, "Share Bug #${issue.id} Report")
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -417,6 +447,42 @@ fun IssueDetailScreen(
                 when (selectedTabIndex) {
                     0 -> {
                         // Overview Tab
+                        // 1. Previous Fix Memory Matcher Banner
+                        if (matchedFixes.isNotEmpty()) {
+                            item {
+                                PreviousFixBanner(
+                                    matchedFix = matchedFixes.first(),
+                                    onApplySolution = { sol ->
+                                        viewModel.updateIssueField { it.copy(solution = sol) }
+                                    },
+                                    onNavigateToIssue = { targetId ->
+                                        viewModel.setIssueId(targetId)
+                                    }
+                                )
+                            }
+                        }
+
+                        // 2. Root Cause Diagnostician Card
+                        item {
+                            RootCauseDiagnosisCard(
+                                exceptionType = issue.exceptionType,
+                                errorMessage = issue.errorMessage.ifBlank { issue.technicalDetails },
+                                onApplySuggestedFix = { codeSnippet ->
+                                    viewModel.updateIssueField { it.copy(solution = codeSnippet) }
+                                }
+                            )
+                        }
+
+                        // 3. Hardware & System Vitals Card
+                        item {
+                            DeviceVitalsCard(
+                                onSnapshotCaptured = { snapshot ->
+                                    viewModel.appendDeviceVitals(context)
+                                }
+                            )
+                        }
+
+                        // 4. Description
                         item {
                             DetailSectionCard(title = "Description") {
                                 OutlinedTextField(
@@ -435,6 +501,7 @@ fun IssueDetailScreen(
                             }
                         }
 
+                        // 5. Screen / Feature Area
                         item {
                             DetailSectionCard(title = "Screen / Feature Area") {
                                 OutlinedTextField(
@@ -454,8 +521,16 @@ fun IssueDetailScreen(
                             }
                         }
 
+                        // 6. Steps to Reproduce (With Voice Dictation trigger)
                         item {
-                            DetailSectionCard(title = "Steps to Reproduce") {
+                            DetailSectionCard(
+                                title = "Steps to Reproduce",
+                                headerAction = {
+                                    TextButton(onClick = { showVoiceStepsDialog = true }) {
+                                        Text("🎙️ Dictate Steps", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F0FF))
+                                    }
+                                }
+                            ) {
                                 OutlinedTextField(
                                     value = issue.stepsToReproduce,
                                     onValueChange = { newSteps ->
@@ -472,6 +547,7 @@ fun IssueDetailScreen(
                             }
                         }
 
+                        // 7. Expected vs Actual Behavior
                         item {
                             DetailSectionCard(title = "Expected vs Actual Behavior") {
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -512,7 +588,57 @@ fun IssueDetailScreen(
                     1 -> {
                         // Logs & Diagnostics Tab
                         item {
-                            Column {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                // Diagnostic Action Chips
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showScanOcrDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00F0FF)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("📸 Scan Terminal OCR", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            haptic.success()
+                                            viewModel.harvestLogcatToTechnicalDetails()
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("📋 Dump Recent Logcat", color = Color.White, fontSize = 12.sp)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            haptic.success()
+                                            viewModel.appendDeviceVitals(context)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("⚡ Snapshot Vitals", color = Color.White, fontSize = 12.sp)
+                                    }
+
+                                    Button(
+                                        onClick = { showCurlInspectorDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("🌐 cURL / HTTP", color = Color(0xFF00FF88), fontSize = 12.sp)
+                                    }
+                                }
+
                                 CodeViewer(
                                     codeText = issue.technicalDetails,
                                     onCodeChange = { newLogs ->
@@ -523,8 +649,6 @@ fun IssueDetailScreen(
                                         viewModel.parseLogsAndAutoPopulate()
                                     }
                                 )
-
-                                Spacer(modifier = Modifier.height(14.dp))
 
                                 // Parsed diagnostics breakdown
                                 DetailSectionCard(title = "Extracted Diagnostics") {
@@ -582,10 +706,15 @@ fun IssueDetailScreen(
                             DetailSectionCard(
                                 title = "Investigation Journal",
                                 headerAction = {
-                                    TextButton(onClick = { showAddNoteDialog = true }) {
-                                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("+ Note", style = MaterialTheme.typography.labelSmall)
+                                    Row {
+                                        TextButton(onClick = { showVoiceStepsDialog = true }) {
+                                            Text("🎙️ Dictate", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F0FF))
+                                        }
+                                        TextButton(onClick = { showAddNoteDialog = true }) {
+                                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("+ Note", style = MaterialTheme.typography.labelSmall)
+                                        }
                                     }
                                 }
                             ) {
@@ -677,7 +806,14 @@ fun IssueDetailScreen(
                         }
 
                         item {
-                            DetailSectionCard(title = "Fix / Solution") {
+                            DetailSectionCard(
+                                title = "Fix / Solution",
+                                headerAction = {
+                                    TextButton(onClick = { showGitCommitDialog = true }) {
+                                        Text("🌿 Git Commit Msg", style = MaterialTheme.typography.labelSmall, color = Color(0xFF58A6FF))
+                                    }
+                                }
+                            ) {
                                 OutlinedTextField(
                                     value = issue.solution,
                                     onValueChange = { newFix ->
@@ -729,6 +865,11 @@ fun IssueDetailScreen(
                                 }
                             }
                         }
+
+                        // Cross-Device Verification Matrix
+                        item {
+                            CrossDeviceVerificationMatrix()
+                        }
                     }
 
                     4 -> {
@@ -738,7 +879,13 @@ fun IssueDetailScreen(
                             DetailSectionCard(
                                 title = "Attachments & Evidence",
                                 headerAction = {
-                                    Row {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(onClick = { showCameraCaptureDialog = true }) {
+                                            Text("📸 Camera", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00FF88))
+                                        }
+                                        TextButton(onClick = { showAudioRecorderDialog = true }) {
+                                            Text("🎙️ Audio", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F0FF))
+                                        }
                                         TextButton(onClick = {
                                             photoPickerLauncher.launch(
                                                 androidx.activity.result.PickVisualMediaRequest(
@@ -747,22 +894,51 @@ fun IssueDetailScreen(
                                             )
                                         }) {
                                             Icon(imageVector = Icons.Default.Image, contentDescription = null, modifier = Modifier.size(14.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Spacer(modifier = Modifier.width(2.dp))
                                             Text("+ Photo", style = MaterialTheme.typography.labelSmall)
-                                        }
-                                        TextButton(onClick = {
-                                            filePickerLauncher.launch("*/*")
-                                        }) {
-                                            Icon(imageVector = Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(14.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("+ File", style = MaterialTheme.typography.labelSmall)
                                         }
                                     }
                                 }
                             ) {
+                                // Action Chips
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
+                                        .padding(bottom = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showBarcodeScannerDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("🏷️ Scan Tag", fontSize = 11.sp, color = Color.White)
+                                    }
+
+                                    Button(
+                                        onClick = { showBugCardShareDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("🎟️ Export Card", fontSize = 11.sp, color = Color(0xFF00FF88))
+                                    }
+
+                                    Button(
+                                        onClick = { filePickerLauncher.launch("*/*") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("+ File", fontSize = 11.sp, color = Color.White)
+                                    }
+                                }
+
                                 if (attachments.isEmpty()) {
                                     Text(
-                                        text = "No screenshots, videos, or logs attached yet.",
+                                        text = "No screenshots, videos, or logs attached yet. Use in-app camera or file picker.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -803,19 +979,32 @@ fun IssueDetailScreen(
                                                             )
                                                         }
                                                     }
-                                                    IconButton(
-                                                        onClick = {
-                                                            haptic.lightTap()
-                                                            viewModel.deleteAttachment(att)
-                                                        },
-                                                        modifier = Modifier.size(24.dp)
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Delete,
-                                                            contentDescription = "Delete",
-                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                            modifier = Modifier.size(14.dp)
-                                                        )
+
+                                                    Row {
+                                                        if (att.isImage) {
+                                                            TextButton(onClick = {
+                                                                val file = File(att.uriPath.removePrefix("file://"))
+                                                                regressionActualImageFile = file
+                                                                showVisualRegressionDialog = true
+                                                            }) {
+                                                                Text("🔀 Compare", fontSize = 11.sp, color = Color(0xFF00F0FF))
+                                                            }
+                                                        }
+
+                                                        IconButton(
+                                                            onClick = {
+                                                                haptic.lightTap()
+                                                                viewModel.deleteAttachment(att)
+                                                            },
+                                                            modifier = Modifier.size(24.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Delete,
+                                                                contentDescription = "Delete",
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                                modifier = Modifier.size(14.dp)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -937,6 +1126,112 @@ fun IssueDetailScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
+        }
+
+        // 1. In-App Camera with Live Bug Markup Dialog
+        if (showCameraCaptureDialog) {
+            AitiaCameraCaptureDialog(
+                onDismiss = { showCameraCaptureDialog = false },
+                onImageCaptured = { capturedFile ->
+                    viewModel.addAttachment(
+                        filename = capturedFile.name,
+                        uriPath = capturedFile.absolutePath,
+                        mimeType = "image/png",
+                        sizeBytes = capturedFile.length()
+                    )
+                }
+            )
+        }
+
+        // 2. Scan-to-StackTrace OCR Dialog
+        if (showScanOcrDialog) {
+            ScanStackTraceDialog(
+                onDismiss = { showScanOcrDialog = false },
+                onApplyParsedStackTrace = { parsed, raw ->
+                    viewModel.updateIssueField { current ->
+                        current.copy(
+                            exceptionType = parsed.exceptionType ?: current.exceptionType,
+                            errorMessage = parsed.errorMessage ?: current.errorMessage,
+                            sourceFile = parsed.sourceFile ?: current.sourceFile,
+                            sourceLine = parsed.sourceLine ?: current.sourceLine,
+                            technicalDetails = if (current.technicalDetails.isBlank()) raw else "${current.technicalDetails}\n\n// --- Scanned Terminal Logs ---\n$raw"
+                        )
+                    }
+                }
+            )
+        }
+
+        // 3. Visual Regression Compare Dialog
+        if (showVisualRegressionDialog && regressionActualImageFile != null) {
+            VisualRegressionCompareDialog(
+                actualImageFile = regressionActualImageFile!!,
+                onDismiss = { showVisualRegressionDialog = false }
+            )
+        }
+
+        // 5. Voice Speech-to-Steps Dialog
+        if (showVoiceStepsDialog) {
+            VoiceReproStepsDialog(
+                initialText = issue.stepsToReproduce,
+                onDismiss = { showVoiceStepsDialog = false },
+                onApplySteps = { steps ->
+                    viewModel.updateIssueField { it.copy(stepsToReproduce = steps) }
+                }
+            )
+        }
+
+        // 6. Audio Glitch Recorder Dialog
+        if (showAudioRecorderDialog) {
+            AudioGlitchRecorderDialog(
+                onDismiss = { showAudioRecorderDialog = false },
+                onAudioRecorded = { audioFile ->
+                    viewModel.addAttachment(
+                        filename = audioFile.name,
+                        uriPath = audioFile.absolutePath,
+                        mimeType = "audio/mp4",
+                        sizeBytes = audioFile.length()
+                    )
+                }
+            )
+        }
+
+        // 9. cURL / Network Inspector Dialog
+        if (showCurlInspectorDialog) {
+            NetworkCurlInspectorDialog(
+                onDismiss = { showCurlInspectorDialog = false },
+                onAttachToIssue = { curl, formattedJson ->
+                    val payload = "// --- cURL Command ---\n$curl\n\n// --- Formatted JSON ---\n$formattedJson"
+                    val currentTech = issue.technicalDetails
+                    val newTech = if (currentTech.isBlank()) payload else "$currentTech\n\n$payload"
+                    viewModel.updateIssueField { it.copy(technicalDetails = newTech) }
+                }
+            )
+        }
+
+        // 12. Git Commit Dialog
+        if (showGitCommitDialog) {
+            GitCommitDialog(
+                issue = issue,
+                onDismiss = { showGitCommitDialog = false }
+            )
+        }
+
+        // 14. Barcode / Asset Tag Scanner Dialog
+        if (showBarcodeScannerDialog) {
+            BarcodeScannerDialog(
+                onDismiss = { showBarcodeScannerDialog = false },
+                onBarcodeScanned = { scanned ->
+                    viewModel.addTag("asset:$scanned")
+                }
+            )
+        }
+
+        // 17. Bug Card Share Dialog
+        if (showBugCardShareDialog) {
+            BugCardShareDialog(
+                issue = issue,
+                onDismiss = { showBugCardShareDialog = false }
+            )
         }
 
         // Add Tag Dialog with autocomplete
