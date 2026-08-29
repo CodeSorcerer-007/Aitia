@@ -52,6 +52,12 @@ fun AitiaNavHost(
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
     var isQuickCaptureOpen by remember { mutableStateOf(initialTriggerQuickCapture) }
+    
+    androidx.compose.runtime.LaunchedEffect(initialTriggerQuickCapture) {
+        if (initialTriggerQuickCapture) {
+            isQuickCaptureOpen = true
+        }
+    }
     val quickCaptureViewModel: QuickCaptureViewModel = viewModel(factory = factory)
 
     val showBottomBar = currentRoute in listOf(
