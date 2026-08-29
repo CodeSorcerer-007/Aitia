@@ -68,7 +68,8 @@ Aitia is a native, offline-first developer issue tracker and debugging journal d
 
 ### 🔒 5. Privacy-First & App Lock Protection
 - **Zero Cloud Tracking**: All stack traces, source code snippets, and private bug notes stay 100% on-device in local SQLite/Room.
-- **App Lock**: Keypad PIN & Biometric protection overlay.
+- **Lifecycle-Aware App Lock**: Keypad PIN & Biometric protection overlay. Instantly secures your data not just on cold starts, but every time the app goes to the background.
+- **Minimal Permissions**: No broad storage access required. Uses modern `PickVisualMedia` API and dynamically asks for `POST_NOTIFICATIONS` on Android 13+ only when needed.
 
 ### 💾 6. Full Data Portability & Export
 - **JSON Backup**: Full versioned database export & import with schema integrity.
