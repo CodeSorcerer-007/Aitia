@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitia.app.data.preferences.UserPreferencesRepository
 import com.aitia.app.data.repository.BackupExportRepository
-import com.aitia.app.data.repository.IssueRepository
-import com.aitia.app.data.repository.ProjectRepository
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
 import com.aitia.app.data.sample.SampleDataSeeder
 import com.aitia.app.domain.model.AppThemeMode
 import com.aitia.app.domain.model.Priority

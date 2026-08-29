@@ -3,9 +3,9 @@ package com.aitia.app.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitia.app.data.preferences.UserPreferencesRepository
-import com.aitia.app.data.repository.IssueRepository
-import com.aitia.app.data.repository.ProjectRepository
-import com.aitia.app.data.repository.TestingSessionRepository
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
+import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.insights.InsightEngine
 import com.aitia.app.domain.model.AnalyticsSummary
 import com.aitia.app.domain.model.InsightItem

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.aitia.app.domain.model.AppThemeMode
 import com.aitia.app.domain.model.Priority
 import com.aitia.app.domain.model.UserPreferences
+import com.aitia.app.util.SecurityUtil
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -64,7 +65,7 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.APP_LOCK_ENABLED] = enabled
             if (pin.isNotEmpty()) {
-                preferences[PreferenceKeys.APP_LOCK_PIN] = pin
+                preferences[PreferenceKeys.APP_LOCK_PIN] = SecurityUtil.hashPin(pin)
             }
             preferences[PreferenceKeys.BIOMETRIC_ENABLED] = biometric
         }

@@ -2,8 +2,8 @@ package com.aitia.app.ui.issues
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aitia.app.data.repository.IssueRepository
-import com.aitia.app.data.repository.ProjectRepository
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
 import com.aitia.app.domain.model.Issue
 import com.aitia.app.domain.model.IssueStatus
 import com.aitia.app.domain.model.IssueType

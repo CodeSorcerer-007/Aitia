@@ -14,15 +14,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 
-interface TestingSessionRepository {
-    fun getAllSessions(): Flow<List<TestingSession>>
-    fun getActiveSession(): Flow<TestingSession?>
-    suspend fun getSessionById(id: Long): TestingSession?
-    fun observeSessionById(id: Long): Flow<TestingSession?>
-    suspend fun startSession(projectId: Long?, name: String, environmentId: Long?): Long
-    suspend fun stopSession(id: Long, notes: String = "")
-    suspend fun deleteSession(session: TestingSession)
-}
+import com.aitia.app.domain.repository.TestingSessionRepository
+import com.aitia.app.domain.repository.EnvironmentRepository
 
 class TestingSessionRepositoryImpl(
     private val sessionDao: TestingSessionDao,
@@ -174,12 +167,7 @@ class TestingSessionRepositoryImpl(
     }
 }
 
-interface EnvironmentRepository {
-    fun getAllEnvironments(): Flow<List<EnvironmentProfile>>
-    suspend fun getEnvironmentById(id: Long): EnvironmentProfile?
-    suspend fun saveEnvironment(env: EnvironmentProfile): Long
-    suspend fun deleteEnvironment(env: EnvironmentProfile)
-}
+
 
 class EnvironmentRepositoryImpl(
     private val environmentDao: EnvironmentDao

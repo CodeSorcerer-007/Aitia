@@ -43,7 +43,7 @@ import com.aitia.app.data.local.entity.TestingSessionEntity
         ChecklistItemEntity::class,
         IssueTimelineEventEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -64,6 +64,12 @@ abstract class AitiaDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AitiaDatabase? = null
 
+        val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Empty migration for safety when bumping version to 2
+            }
+        }
+
         fun getDatabase(context: Context): AitiaDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -71,7 +77,7 @@ abstract class AitiaDatabase : RoomDatabase() {
                     AitiaDatabase::class.java,
                     "aitia.db"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                 INSTANCE = instance
                 instance

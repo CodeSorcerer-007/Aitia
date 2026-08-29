@@ -2,9 +2,9 @@ package com.aitia.app.ui.projects
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aitia.app.data.repository.EnvironmentRepository
-import com.aitia.app.data.repository.ProjectRepository
-import com.aitia.app.data.repository.TestingSessionRepository
+import com.aitia.app.domain.repository.EnvironmentRepository
+import com.aitia.app.domain.repository.ProjectRepository
+import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.model.EnvironmentProfile
 import com.aitia.app.domain.model.Project
 import com.aitia.app.domain.model.ProjectVersion

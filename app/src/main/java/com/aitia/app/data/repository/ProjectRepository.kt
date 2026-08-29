@@ -11,16 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 
-interface ProjectRepository {
-    fun getAllProjects(): Flow<List<Project>>
-    suspend fun getProjectById(id: Long): Project?
-    fun observeProjectById(id: Long): Flow<Project?>
-    suspend fun saveProject(project: Project): Long
-    suspend fun deleteProject(project: Project)
-    fun getVersionsForProject(projectId: Long): Flow<List<ProjectVersion>>
-    suspend fun saveVersion(version: ProjectVersion): Long
-    suspend fun deleteVersion(version: ProjectVersion)
-}
+import com.aitia.app.domain.repository.ProjectRepository
 
 class ProjectRepositoryImpl(
     private val projectDao: ProjectDao,

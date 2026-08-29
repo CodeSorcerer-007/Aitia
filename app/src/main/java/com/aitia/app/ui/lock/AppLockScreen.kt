@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.aitia.app.R
 import com.aitia.app.ui.theme.AitiaBlue
 import com.aitia.app.ui.theme.StatusBlocked
+import com.aitia.app.util.SecurityUtil
 import com.aitia.app.util.rememberHapticFeedback
 
 @Composable
@@ -89,7 +90,7 @@ fun AppLockScreen(
 
             // PIN Dots
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val maxLen = if (correctPin.length > 4) correctPin.length else 4
+                val maxLen = java.lang.Math.max(4, if (enteredPin.length < 8) enteredPin.length + 1 else 8)
                 for (i in 0 until maxLen) {
                     val isFilled = i < enteredPin.length
                     Box(
@@ -141,10 +142,10 @@ fun AppLockScreen(
                                             if (enteredPin.length < 8) {
                                                 val newPin = enteredPin + key
                                                 enteredPin = newPin
-                                                if (newPin == correctPin) {
+                                                if (SecurityUtil.hashPin(newPin) == correctPin) {
                                                     haptic.success()
                                                     onUnlocked()
-                                                } else if (newPin.length >= correctPin.length) {
+                                                } else if (newPin.length >= 8) {
                                                     haptic.warning()
                                                     isError = true
                                                     enteredPin = ""

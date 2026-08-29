@@ -3,10 +3,10 @@ package com.aitia.app.ui.quickcapture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitia.app.data.preferences.UserPreferencesRepository
-import com.aitia.app.data.repository.EnvironmentRepository
-import com.aitia.app.data.repository.IssueRepository
-import com.aitia.app.data.repository.ProjectRepository
-import com.aitia.app.data.repository.TestingSessionRepository
+import com.aitia.app.domain.repository.EnvironmentRepository
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
+import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.model.EnvironmentProfile
 import com.aitia.app.domain.model.Issue
 import com.aitia.app.domain.model.IssueStatus

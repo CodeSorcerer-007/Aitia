@@ -11,6 +11,8 @@ import com.aitia.app.data.local.entity.ProjectVersionEntity
 import com.aitia.app.data.local.entity.TagEntity
 import com.aitia.app.data.local.entity.TestingSessionEntity
 import com.aitia.app.domain.model.Issue
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext

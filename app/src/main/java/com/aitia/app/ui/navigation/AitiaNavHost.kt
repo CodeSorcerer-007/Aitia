@@ -87,7 +87,7 @@ fun AitiaNavHost(
         NavHost(
             navController = navController,
             startDestination = if (hasCompletedOnboarding) Screen.Home.route else Screen.Onboarding.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // 1. Onboarding
             composable(Screen.Onboarding.route) {
