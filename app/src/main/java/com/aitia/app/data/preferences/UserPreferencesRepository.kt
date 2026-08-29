@@ -33,8 +33,8 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     val userPreferences: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
-        val themeStr = preferences[PreferenceKeys.THEME_MODE] ?: AppThemeMode.DARK.name
-        val themeMode = runCatching { AppThemeMode.valueOf(themeStr) }.getOrDefault(AppThemeMode.DARK)
+        val themeStr = preferences[PreferenceKeys.THEME_MODE] ?: AppThemeMode.OLED_MIDNIGHT.name
+        val themeMode = runCatching { AppThemeMode.valueOf(themeStr) }.getOrDefault(AppThemeMode.OLED_MIDNIGHT)
 
         val defaultPriorityStr = preferences[PreferenceKeys.DEFAULT_PRIORITY] ?: Priority.MEDIUM.name
         val defaultPriority = runCatching { Priority.valueOf(defaultPriorityStr) }.getOrDefault(Priority.MEDIUM)

@@ -135,27 +135,105 @@ fun SettingsScreen(
         ) {
             // 1. Appearance & Theme
             item {
-                SettingsSectionCard(title = "Appearance") {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SettingsSectionCard(title = "Appearance & OLED Themes") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            text = "Theme Mode",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Developer-tailored visual themes optimized for 120Hz OLED displays & dark room debugging.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             AppThemeMode.entries.forEach { mode ->
-                                FilterChip(
-                                    selected = prefs.themeMode == mode,
-                                    onClick = {
-                                        haptic.lightTap()
-                                        viewModel.setThemeMode(mode)
-                                    },
-                                    label = { Text(mode.name, style = MaterialTheme.typography.labelSmall) },
-                                    modifier = Modifier.weight(1f)
-                                )
+                                val isSelected = prefs.themeMode == mode
+                                val primaryColor = Color(android.graphics.Color.parseColor(mode.primaryColorHex))
+                                val secondaryColor = Color(android.graphics.Color.parseColor(mode.secondaryColorHex))
+                                val surfaceColor = Color(android.graphics.Color.parseColor(mode.surfaceColorHex))
+
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .border(
+                                            width = if (isSelected) 1.5.dp else 1.dp,
+                                            color = if (isSelected) primaryColor else MaterialTheme.colorScheme.outlineVariant,
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                        .clickable {
+                                            haptic.success()
+                                            viewModel.setThemeMode(mode)
+                                        },
+                                    color = if (isSelected) primaryColor.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                                    tonalElevation = if (isSelected) 2.dp else 0.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = mode.displayName,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                if (mode.isOled) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Surface(
+                                                        color = Color(0xFF00FF88).copy(alpha = 0.15f),
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "OLED 0%",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = Color(0xFF00FF88),
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = mode.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        // Color Swatches
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .clip(CircleShape)
+                                                    .background(primaryColor)
+                                                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .clip(CircleShape)
+                                                    .background(secondaryColor)
+                                                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .clip(CircleShape)
+                                                    .background(surfaceColor)
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

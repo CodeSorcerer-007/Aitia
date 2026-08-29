@@ -65,9 +65,14 @@ Aitia is a native, offline-first developer issue tracker and debugging journal d
 - **Markdown Reports**: Formatted defect reports for pasting into GitHub Issues, Notion, Slack, or email.
 - **CSV Export**: Clean tabular data for spreadsheets.
 
-### 🎨 7. Branding & Motion Design
-- **Animated Aitia Logo**: Custom breathing scale pulse with a rotating neon gradient aura during loading and demo data seeding.
-- **Visual Palette**: Linear/Raycast-inspired dark slate theme (`#0B0F17`, `#161B22`, `#21262D`, `#30363D`), Electric Blue (`#58A6FF`), Greek Purple (`#A371F7`), and OLED Pure Black mode.
+### 🎨 7. Visual Themes & Motion Design (OLED 0% Battery Optimization)
+- **4 Dedicated Pitch-Black OLED Developer Themes**:
+  - **Obsidian Blue**: Pure `#000000` pitch black with Electric Blue accents and neon borders.
+  - **Cyberpunk Matrix**: Matrix Emerald (`#00FF88`) & Laser Cyan (`#00F0FF`) on pure black.
+  - **Nebula Amethyst**: Deep Ultraviolet & Greek Αἰτία Purple (`#BC8CFF`) with magenta highlights.
+  - **Tokyo Monokai**: Multi-color code syntax highlighting (Pink `#FF6188`, Orange `#FC9867`, Cyan `#78DCE8`).
+  - **GitHub Dark Slate** & **Daylight Clean** modes.
+- **Animated Aitia Logo**: Custom breathing scale pulse with a rotating sweep gradient aura during loading & demo data seeding.
 - **Haptics**: Tactile vibration feedback on button presses, status transitions, and verified milestones.
 
 ### ⚡ 8. Android Home-Screen Widget
