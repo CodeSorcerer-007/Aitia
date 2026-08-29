@@ -1,0 +1,221 @@
+package com.aitia.app.ui.detail
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.aitia.app.data.repository.BackupExportRepository
+import com.aitia.app.data.repository.EnvironmentRepository
+import com.aitia.app.data.repository.IssueRepository
+import com.aitia.app.data.repository.ProjectRepository
+import com.aitia.app.domain.model.Attachment
+import com.aitia.app.domain.model.ChecklistItem
+import com.aitia.app.domain.model.EnvironmentProfile
+import com.aitia.app.domain.model.Issue
+import com.aitia.app.domain.model.IssueNote
+import com.aitia.app.domain.model.IssueStatus
+import com.aitia.app.domain.model.IssueType
+import com.aitia.app.domain.model.Priority
+import com.aitia.app.domain.model.Project
+import com.aitia.app.domain.model.RelatedIssue
+import com.aitia.app.domain.model.RelationshipType
+import com.aitia.app.domain.model.TimelineEvent
+import com.aitia.app.domain.parser.StackTraceParser
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.io.File
+
+data class IssueDetailUiState(
+    val issue: Issue? = null,
+    val notes: List<IssueNote> = emptyList(),
+    val attachments: List<Attachment> = emptyList(),
+    val checklist: List<ChecklistItem> = emptyList(),
+    val relatedIssues: List<RelatedIssue> = emptyList(),
+    val timeline: List<TimelineEvent> = emptyList(),
+    val projects: List<Project> = emptyList(),
+    val environments: List<EnvironmentProfile> = emptyList(),
+    val allIssues: List<Issue> = emptyList(),
+    val isEditing: Boolean = false,
+    val isLoading: Boolean = true
+)
+
+class IssueDetailViewModel(
+    private val issueRepository: IssueRepository,
+    private val projectRepository: ProjectRepository,
+    private val environmentRepository: EnvironmentRepository,
+    private val backupExportRepository: BackupExportRepository
+) : ViewModel() {
+
+    private val _issueId = MutableStateFlow<Long?>(null)
+    private val _isEditing = MutableStateFlow(false)
+
+    fun setIssueId(id: Long) {
+        _issueId.value = id
+    }
+
+    val uiState: StateFlow<IssueDetailUiState> = combine(
+        _issueId,
+        _isEditing,
+        issueRepository.getAllIssues(),
+        projectRepository.getAllProjects(),
+        environmentRepository.getAllEnvironments()
+    ) { issueId, isEditing, allIssues, projects, envs ->
+        if (issueId == null) {
+            IssueDetailUiState(isLoading = true)
+        } else {
+            val currentIssue = allIssues.firstOrNull { it.id == issueId }
+            IssueDetailUiState(
+                issue = currentIssue,
+                projects = projects,
+                environments = envs,
+                allIssues = allIssues.filter { it.id != issueId },
+                isEditing = isEditing,
+                isLoading = false
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = IssueDetailUiState()
+    )
+
+    fun getNotesFlow(issueId: Long) = issueRepository.getNotesForIssue(issueId)
+    fun getAttachmentsFlow(issueId: Long) = issueRepository.getAttachmentsForIssue(issueId)
+    fun getChecklistFlow(issueId: Long) = issueRepository.getChecklistForIssue(issueId)
+    fun getRelatedFlow(issueId: Long) = issueRepository.getRelatedIssues(issueId)
+    fun getTimelineFlow(issueId: Long) = issueRepository.getTimelineForIssue(issueId)
+
+    fun updateStatus(newStatus: IssueStatus) {
+        val id = _issueId.value ?: return
+        viewModelScope.launch {
+            issueRepository.updateStatus(id, newStatus)
+        }
+    }
+
+    fun updateIssueField(updateBlock: (Issue) -> Issue) {
+        val current = uiState.value.issue ?: return
+        val updated = updateBlock(current)
+        viewModelScope.launch {
+            issueRepository.saveIssue(updated)
+        }
+    }
+
+    fun togglePinned() {
+        val current = uiState.value.issue ?: return
+        viewModelScope.launch {
+            issueRepository.togglePinned(current.id, !current.isPinned)
+        }
+    }
+
+    fun toggleArchived() {
+        val current = uiState.value.issue ?: return
+        viewModelScope.launch {
+            issueRepository.toggleArchived(current.id, !current.isArchived)
+        }
+    }
+
+    fun deleteIssue(onComplete: () -> Unit) {
+        val current = uiState.value.issue ?: return
+        viewModelScope.launch {
+            issueRepository.deleteIssue(current)
+            onComplete()
+        }
+    }
+
+    fun addNote(text: String) {
+        val id = _issueId.value ?: return
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            issueRepository.addNote(id, text)
+        }
+    }
+
+    fun deleteNote(note: IssueNote) {
+        viewModelScope.launch {
+            issueRepository.deleteNote(note.id, note.issueId, note.text)
+        }
+    }
+
+    fun addChecklistItem(text: String) {
+        val id = _issueId.value ?: return
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            issueRepository.addChecklistItem(id, text)
+        }
+    }
+
+    fun toggleChecklistItem(item: ChecklistItem, isCompleted: Boolean) {
+        viewModelScope.launch {
+            issueRepository.toggleChecklistItem(item.id, isCompleted)
+        }
+    }
+
+    fun deleteChecklistItem(item: ChecklistItem) {
+        viewModelScope.launch {
+            issueRepository.deleteChecklistItem(item)
+        }
+    }
+
+    fun addAttachment(filename: String, uriPath: String, mimeType: String, sizeBytes: Long) {
+        val id = _issueId.value ?: return
+        viewModelScope.launch {
+            issueRepository.addAttachment(id, uriPath, filename, mimeType, sizeBytes)
+        }
+    }
+
+    fun deleteAttachment(attachment: Attachment) {
+        viewModelScope.launch {
+            issueRepository.deleteAttachment(attachment)
+        }
+    }
+
+    fun getTagsFlow(issueId: Long) = issueRepository.getTagsForIssue(issueId)
+    fun getAllTagsFlow() = issueRepository.getAllTags()
+
+    fun addTag(tagName: String) {
+        val id = _issueId.value ?: return
+        if (tagName.isBlank()) return
+        viewModelScope.launch {
+            issueRepository.addTagToIssue(id, tagName)
+        }
+    }
+
+    fun removeTag(tagId: Long) {
+        val id = _issueId.value ?: return
+        viewModelScope.launch {
+            issueRepository.removeTagFromIssue(id, tagId)
+        }
+    }
+
+    fun linkRelatedIssue(targetIssueId: Long, relationshipType: RelationshipType) {
+        val id = _issueId.value ?: return
+        viewModelScope.launch {
+            issueRepository.addRelatedIssue(id, targetIssueId, relationshipType)
+        }
+    }
+
+    fun parseLogsAndAutoPopulate() {
+        val current = uiState.value.issue ?: return
+        if (current.technicalDetails.isBlank()) return
+        val parsed = StackTraceParser.parse(current.technicalDetails)
+        if (parsed.isParsed) {
+            val updated = current.copy(
+                exceptionType = parsed.exceptionType ?: current.exceptionType,
+                errorMessage = parsed.errorMessage ?: current.errorMessage,
+                sourceFile = parsed.sourceFile ?: current.sourceFile,
+                sourceLine = parsed.sourceLine ?: current.sourceLine
+            )
+            viewModelScope.launch {
+                issueRepository.saveIssue(updated)
+            }
+        }
+    }
+
+    fun generateMarkdownReport(): String {
+        val current = uiState.value.issue ?: return ""
+        return backupExportRepository.generateMarkdownReport(listOf(current), current.projectName ?: "Aitia Bug Report")
+    }
+}
