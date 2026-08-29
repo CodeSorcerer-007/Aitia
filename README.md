@@ -1,14 +1,24 @@
-# AITIA (Αἰτία) — Native Android Developer Bug & Debugging Notebook
+<p align="center">
+  <img src="Aitia%20Logo.png" alt="Aitia Logo" width="140" height="140" />
+</p>
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-purple.svg)](https://kotlinlang.org)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4.svg)](https://developer.android.com/jetpack/compose)
-[![Room](https://img.shields.io/badge/Room-2.6.1-orange.svg)](https://developer.android.com/training/data-storage/room)
-[![Offline First](https://img.shields.io/badge/Privacy-100%25%20Offline-green.svg)](https://aitia.dev)
-[![Android](https://img.shields.io/badge/Android-8.0%20to%2016-brightgreen.svg)](https://developer.android.com)
+<h1 align="center">AITIA (Αἰτία)</h1>
+<p align="center">
+  <strong>Native Android Developer Bug & Debugging Notebook</strong>
+</p>
 
-> **"Aitia helps developers capture what went wrong, understand why it happened, and keep a record of how it was fixed."**
-> 
-> *The name **Aitia (Αἰτία)** comes from the ancient Greek concept of **cause / reason** — finding the underlying cause behind software problems.*
+<p align="center">
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.0.21-purple.svg" alt="Kotlin" /></a>
+  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4.svg" alt="Jetpack Compose" /></a>
+  <a href="https://developer.android.com/training/data-storage/room"><img src="https://img.shields.io/badge/Room-2.6.1-orange.svg" alt="Room" /></a>
+  <a href="https://aitia.dev"><img src="https://img.shields.io/badge/Privacy-100%25%20Offline-green.svg" alt="Offline First" /></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0%20to%2016-brightgreen.svg" alt="Android" /></a>
+</p>
+
+<p align="center">
+  <em>"Aitia helps developers capture what went wrong, understand why it happened, and keep a record of how it was fixed."</em><br/>
+  <sub>The name <strong>Aitia (Αἰτία)</strong> comes from the ancient Greek concept of <strong>cause / reason</strong> — finding the underlying cause behind software problems.</sub>
+</p>
 
 ---
 
