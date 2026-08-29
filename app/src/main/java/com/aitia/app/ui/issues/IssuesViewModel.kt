@@ -48,8 +48,8 @@ class IssuesViewModel(
         _sortOption,
         issueRepository.getAllIssues(),
         projectRepository.getAllProjects()
-    ) { query, filter, sort, allIssues, projects ->
-        val filtered = allIssues.filter { issue ->
+    ) { query: String, filter: IssueFilterState, sort: IssueSortOption, allIssues: List<Issue>, projects: List<Project> ->
+        val filtered: List<Issue> = allIssues.filter { issue: Issue ->
             // Archive filter
             val archiveMatch = if (filter.showArchived) issue.isArchived else !issue.isArchived
 
@@ -84,7 +84,7 @@ class IssuesViewModel(
         }
 
         // Sorting
-        val sorted = when (sort) {
+        val sorted: List<Issue> = when (sort) {
             IssueSortOption.RECENTLY_CREATED -> filtered.sortedWith(
                 compareByDescending<Issue> { it.isPinned }.thenByDescending { it.createdAt }
             )

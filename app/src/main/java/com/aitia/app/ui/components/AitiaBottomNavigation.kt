@@ -160,7 +160,7 @@ private fun BottomNavItem(
     onClick: () -> Unit
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))

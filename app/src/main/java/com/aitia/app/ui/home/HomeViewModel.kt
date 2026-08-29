@@ -38,13 +38,17 @@ class HomeViewModel(
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
-        issueRepository.getActiveIssues(),
-        issueRepository.getPinnedIssues(),
-        sessionRepository.getActiveSession(),
-        issueRepository.getAnalyticsSummary(),
-        sessionRepository.getAllSessions(),
-        projectRepository.getAllProjects()
-    ) { activeIssues, pinned, activeSession, analytics, allSessions, projects ->
+        combine(
+            issueRepository.getActiveIssues(),
+            issueRepository.getPinnedIssues(),
+            sessionRepository.getActiveSession()
+        ) { active, pinned, session -> Triple(active, pinned, session) },
+        combine(
+            issueRepository.getAnalyticsSummary(),
+            sessionRepository.getAllSessions(),
+            projectRepository.getAllProjects()
+        ) { analytics, allSessions, projects -> Triple(analytics, allSessions, projects) }
+    ) { (activeIssues, pinned, activeSession), (analytics, allSessions, projects) ->
         val insights = InsightEngine.generateInsights(activeIssues, allSessions)
         HomeUiState(
             recentIssues = activeIssues.take(6),

@@ -1,8 +1,7 @@
 package com.aitia.app.widget
 
+import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -12,7 +11,6 @@ import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
-import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
@@ -27,8 +25,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -45,16 +41,12 @@ class AitiaAppWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent(context: Context) {
-        val quickCaptureIntent = Intent(context, MainActivity::class.java).apply {
-            action = Intent.ACTION_VIEW
-            data = Uri.parse("aitia://quickcapture")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
+        val componentName = ComponentName(context, MainActivity::class.java)
 
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(Color(0xFF161B22), Color(0xFF161B22)))
+                .background(ColorProvider(Color(0xFF161B22)))
                 .cornerRadius(16.dp)
                 .padding(14.dp)
         ) {
@@ -70,7 +62,7 @@ class AitiaAppWidget : GlanceAppWidget() {
                     Text(
                         text = "AITIA",
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFF58A6FF), Color(0xFF58A6FF)),
+                            color = ColorProvider(Color(0xFF58A6FF)),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -79,7 +71,7 @@ class AitiaAppWidget : GlanceAppWidget() {
                     Text(
                         text = "Αἰτία",
                         style = TextStyle(
-                            color = ColorProvider(Color(0xFF8B949E), Color(0xFF8B949E)),
+                            color = ColorProvider(Color(0xFF8B949E)),
                             fontSize = 12.sp
                         )
                     )
@@ -95,7 +87,7 @@ class AitiaAppWidget : GlanceAppWidget() {
                         Text(
                             text = "Find the cause. Fix the problem.",
                             style = TextStyle(
-                                color = ColorProvider(Color(0xFFF0F6FC), Color(0xFFF0F6FC)),
+                                color = ColorProvider(Color(0xFFF0F6FC)),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -107,10 +99,10 @@ class AitiaAppWidget : GlanceAppWidget() {
 
                 Button(
                     text = "+ Quick Capture",
-                    onClick = actionStartActivity(quickCaptureIntent),
+                    onClick = actionStartActivity(componentName),
                     colors = ButtonDefaults.buttonColors(
-                        backgroundColor = ColorProvider(Color(0xFF58A6FF), Color(0xFF58A6FF)),
-                        contentColor = ColorProvider(Color.White, Color.White)
+                        backgroundColor = ColorProvider(Color(0xFF58A6FF)),
+                        contentColor = ColorProvider(Color.White)
                     ),
                     modifier = GlanceModifier.fillMaxWidth().height(36.dp)
                 )

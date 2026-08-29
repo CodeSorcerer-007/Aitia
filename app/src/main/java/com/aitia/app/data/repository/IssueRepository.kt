@@ -38,6 +38,7 @@ import java.time.Duration
 import java.time.Instant
 
 interface IssueRepository {
+    fun getAllIssues(): Flow<List<Issue>>
     fun getActiveIssues(): Flow<List<Issue>>
     fun getArchivedIssues(): Flow<List<Issue>>
     fun getPinnedIssues(): Flow<List<Issue>>
@@ -100,6 +101,8 @@ class IssueRepositoryImpl(
     private val checklistDao: ChecklistDao,
     private val timelineDao: TimelineDao
 ) : IssueRepository {
+
+    override fun getAllIssues(): Flow<List<Issue>> = mapEntitiesToDomain(issueDao.getAllIssues())
 
     override fun getActiveIssues(): Flow<List<Issue>> = mapEntitiesToDomain(issueDao.getActiveIssues())
 

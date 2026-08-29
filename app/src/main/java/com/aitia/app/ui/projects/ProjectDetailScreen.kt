@@ -255,8 +255,9 @@ fun ProjectDetailScreen(
                     }
                 } else {
                     // Releases & Versions Grouping Tab (Section 23 & 53)
-                    val groupedByVersion = projectIssues.groupBy {
-                        it.appVersion.ifBlank { "v${project.currentVersion}" }
+                    val groupedByVersion: Map<String, List<Issue>> = projectIssues.groupBy { issue: Issue ->
+                        val verName = issue.introducedVersionName
+                        if (!verName.isNullOrBlank()) verName else "v${project.currentVersion}"
                     }
 
                     if (groupedByVersion.isEmpty()) {
@@ -268,7 +269,9 @@ fun ProjectDetailScreen(
                             )
                         }
                     } else {
-                        groupedByVersion.forEach { (versionStr, issuesInVersion) ->
+                        groupedByVersion.forEach { entry: Map.Entry<String, List<Issue>> ->
+                            val versionStr = entry.key
+                            val issuesInVersion = entry.value
                             item {
                                 val fixedCount = issuesInVersion.count { it.status == IssueStatus.FIXED || it.status == IssueStatus.VERIFIED }
                                 val openCount = issuesInVersion.count { it.status == IssueStatus.OPEN || it.status == IssueStatus.INVESTIGATING }

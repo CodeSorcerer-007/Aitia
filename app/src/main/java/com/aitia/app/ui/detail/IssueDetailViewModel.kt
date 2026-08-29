@@ -62,7 +62,7 @@ class IssueDetailViewModel(
         issueRepository.getAllIssues(),
         projectRepository.getAllProjects(),
         environmentRepository.getAllEnvironments()
-    ) { issueId, isEditing, allIssues, projects, envs ->
+    ) { issueId: Long?, isEditing: Boolean, allIssues: List<Issue>, projects: List<Project>, envs: List<EnvironmentProfile> ->
         if (issueId == null) {
             IssueDetailUiState(isLoading = true)
         } else {
