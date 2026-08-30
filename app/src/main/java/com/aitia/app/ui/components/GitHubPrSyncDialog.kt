@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import com.aitia.app.domain.model.Issue
 import com.aitia.app.ui.theme.AitiaBlue
 import com.aitia.app.util.GitRemoteSyncManager
@@ -64,13 +66,16 @@ import com.aitia.app.util.rememberHapticFeedback
 @Composable
 fun GitHubPrSyncDialog(
     issue: Issue,
+    githubPat: String,
+    defaultRepo: String,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
 
-    var repoOwner by remember { mutableStateOf("CodeSorcerer-007") }
-    var repoName by remember { mutableStateOf("Aitia") }
+    var repoOwner by remember { mutableStateOf(defaultRepo.substringBefore("/", "CodeSorcerer-007")) }
+    var repoName by remember { mutableStateOf(defaultRepo.substringAfter("/", "Aitia")) }
     var baseBranch by remember { mutableStateOf("main") }
     var platformType by remember { mutableStateOf(0) } // 0: GitHub, 1: GitLab
 
@@ -286,6 +291,36 @@ fun GitHubPrSyncDialog(
                                 color = Color(0xFFC9D1D9),
                                 maxLines = 8
                             )
+                        }
+                    }
+
+                    if (githubPat.isNotBlank()) {
+                        Button(
+                            onClick = {
+                                haptic.success()
+                                scope.launch {
+                                    val result = GitRemoteSyncManager.createGitHubIssue(
+                                        issue = issue,
+                                        githubPat = githubPat,
+                                        defaultRepo = "$repoOwner/$repoName"
+                                    )
+                                    if (result.isSuccess) {
+                                        Toast.makeText(context, "Issue Created Successfully!", Toast.LENGTH_SHORT).show()
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.getOrNull()))
+                                        context.startActivity(intent)
+                                        onDismiss()
+                                    } else {
+                                        Toast.makeText(context, "API Error: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FF88)),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("1-Click Publish Issue via API", color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

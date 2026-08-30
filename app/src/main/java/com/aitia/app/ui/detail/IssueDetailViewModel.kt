@@ -3,6 +3,7 @@ package com.aitia.app.ui.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitia.app.data.repository.BackupExportRepository
+import com.aitia.app.data.repository.SettingsRepository
 import com.aitia.app.domain.repository.EnvironmentRepository
 import com.aitia.app.domain.repository.IssueRepository
 import com.aitia.app.domain.repository.ProjectRepository
@@ -25,28 +26,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.io.File
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 data class IssueDetailUiState(
     val issue: Issue? = null,
-    val notes: List<IssueNote> = emptyList(),
-    val attachments: List<Attachment> = emptyList(),
-    val checklist: List<ChecklistItem> = emptyList(),
-    val relatedIssues: List<RelatedIssue> = emptyList(),
-    val timeline: List<TimelineEvent> = emptyList(),
-    val projects: List<Project> = emptyList(),
-    val environments: List<EnvironmentProfile> = emptyList(),
-    val allIssues: List<Issue> = emptyList(),
     val isEditing: Boolean = false,
     val isLoading: Boolean = true
 )
 
-class IssueDetailViewModel(
+@HiltViewModel
+class IssueDetailViewModel @Inject constructor(
     private val issueRepository: IssueRepository,
     private val projectRepository: ProjectRepository,
     private val environmentRepository: EnvironmentRepository,
-    private val backupExportRepository: BackupExportRepository
+    private val backupExportRepository: BackupExportRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _issueId = MutableStateFlow<Long?>(null)
@@ -56,25 +56,21 @@ class IssueDetailViewModel(
         _issueId.value = id
     }
 
-    val uiState: StateFlow<IssueDetailUiState> = combine(
-        _issueId,
-        _isEditing,
-        issueRepository.getAllIssues(),
-        projectRepository.getAllProjects(),
-        environmentRepository.getAllEnvironments()
-    ) { issueId: Long?, isEditing: Boolean, allIssues: List<Issue>, projects: List<Project>, envs: List<EnvironmentProfile> ->
-        if (issueId == null) {
-            IssueDetailUiState(isLoading = true)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<IssueDetailUiState> = _issueId.flatMapLatest { id ->
+        if (id == null) {
+            flowOf(IssueDetailUiState(isLoading = true))
         } else {
-            val currentIssue = allIssues.firstOrNull { it.id == issueId }
-            IssueDetailUiState(
-                issue = currentIssue,
-                projects = projects,
-                environments = envs,
-                allIssues = allIssues.filter { it.id != issueId },
-                isEditing = isEditing,
-                isLoading = false
-            )
+            combine(
+                issueRepository.observeIssueById(id),
+                _isEditing
+            ) { issue, isEditing ->
+                IssueDetailUiState(
+                    issue = issue,
+                    isEditing = isEditing,
+                    isLoading = false
+                )
+            }
         }
     }.stateIn(
         scope = viewModelScope,
@@ -82,11 +78,37 @@ class IssueDetailViewModel(
         initialValue = IssueDetailUiState()
     )
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val allIssuesFlow: StateFlow<List<Issue>> = _issueId.flatMapLatest { id ->
+        if (id == null) flowOf(emptyList())
+        else issueRepository.getAllIssues().map { list -> list.filter { it.id != id } }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val projectsFlow: StateFlow<List<Project>> = projectRepository.getAllProjects().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val environmentsFlow: StateFlow<List<EnvironmentProfile>> = environmentRepository.getAllEnvironments().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     fun getNotesFlow(issueId: Long) = issueRepository.getNotesForIssue(issueId)
     fun getAttachmentsFlow(issueId: Long) = issueRepository.getAttachmentsForIssue(issueId)
     fun getChecklistFlow(issueId: Long) = issueRepository.getChecklistForIssue(issueId)
     fun getRelatedFlow(issueId: Long) = issueRepository.getRelatedIssues(issueId)
     fun getTimelineFlow(issueId: Long) = issueRepository.getTimelineForIssue(issueId)
+    
+    fun getGeminiApiKey(): String = settingsRepository.getGeminiApiKey()
+    fun getGithubPat(): String = settingsRepository.getGithubPat()
+    fun getDefaultRepo(): String = settingsRepository.getDefaultRepo()
 
     fun updateStatus(newStatus: IssueStatus) {
         val id = _issueId.value ?: return
@@ -200,15 +222,15 @@ class IssueDetailViewModel(
     fun parseLogsAndAutoPopulate() {
         val current = uiState.value.issue ?: return
         if (current.technicalDetails.isBlank()) return
-        val parsed = StackTraceParser.parse(current.technicalDetails)
-        if (parsed.isParsed) {
-            val updated = current.copy(
-                exceptionType = parsed.exceptionType ?: current.exceptionType,
-                errorMessage = parsed.errorMessage ?: current.errorMessage,
-                sourceFile = parsed.sourceFile ?: current.sourceFile,
-                sourceLine = parsed.sourceLine ?: current.sourceLine
-            )
-            viewModelScope.launch {
+        viewModelScope.launch {
+            val parsed = StackTraceParser.parse(current.technicalDetails)
+            if (parsed.isParsed) {
+                val updated = current.copy(
+                    exceptionType = parsed.exceptionType ?: current.exceptionType,
+                    errorMessage = parsed.errorMessage ?: current.errorMessage,
+                    sourceFile = parsed.sourceFile ?: current.sourceFile,
+                    sourceLine = parsed.sourceLine ?: current.sourceLine
+                )
                 issueRepository.saveIssue(updated)
             }
         }

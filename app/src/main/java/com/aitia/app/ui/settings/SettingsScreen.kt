@@ -1,5 +1,8 @@
 package com.aitia.app.ui.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,7 +61,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +72,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aitia.app.domain.model.AppThemeMode
 import com.aitia.app.domain.model.Priority
@@ -88,7 +93,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val prefs = uiState.preferences
     val haptic = rememberHapticFeedback()
     val extendedColors = LocalExtendedColors.current
@@ -96,7 +101,21 @@ fun SettingsScreen(
 
     var showClearDataDialog by remember { mutableStateOf(false) }
     var showPinSetupDialog by remember { mutableStateOf(false) }
-    var showImportDialog by remember { mutableStateOf(false) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val jsonContent = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                if (!jsonContent.isNullOrBlank()) {
+                    viewModel.importBackupJson(jsonContent) {}
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     LaunchedEffect(uiState.statusMessage) {
         uiState.statusMessage?.let {
@@ -241,7 +260,49 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. Security & App Lock
+            // 2. API Keys & Integrations
+            item {
+                SettingsSectionCard(title = "API Keys & Integrations") {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = "Provide your own API keys to enable AI debugging and GitHub syncing. Stored securely on-device.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        OutlinedTextField(
+                            value = uiState.geminiApiKey,
+                            onValueChange = { viewModel.setGeminiApiKey(it) },
+                            label = { Text("Gemini API Key") },
+                            placeholder = { Text("AI Studio Key (Optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation()
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.githubPat,
+                            onValueChange = { viewModel.setGithubPat(it) },
+                            label = { Text("GitHub Personal Access Token (PAT)") },
+                            placeholder = { Text("ghp_...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation()
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.defaultRepo,
+                            onValueChange = { viewModel.setDefaultRepo(it) },
+                            label = { Text("Default GitHub Repository") },
+                            placeholder = { Text("owner/repo") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+
+            // 3. Security & App Lock
             item {
                 SettingsSectionCard(title = "Security & Privacy") {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -385,7 +446,7 @@ fun SettingsScreen(
 
                         // Import JSON
                         Button(
-                            onClick = { showImportDialog = true },
+                            onClick = { importLauncher.launch("application/json") },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(8.dp)
@@ -515,43 +576,6 @@ fun SettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showPinSetupDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        // Import JSON Dialog
-        if (showImportDialog) {
-            var jsonInput by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { showImportDialog = false },
-                title = { Text("Paste JSON Backup Content") },
-                text = {
-                    OutlinedTextField(
-                        value = jsonInput,
-                        onValueChange = { jsonInput = it },
-                        placeholder = { Text("Paste backup JSON here...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 8
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (jsonInput.isNotBlank()) {
-                                viewModel.importBackupJson(jsonInput) {
-                                    showImportDialog = false
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AitiaBlue)
-                    ) {
-                        Text("Import")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showImportDialog = false }) {
                         Text("Cancel")
                     }
                 }

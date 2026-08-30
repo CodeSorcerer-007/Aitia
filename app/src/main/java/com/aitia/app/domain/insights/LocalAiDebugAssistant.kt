@@ -1,6 +1,9 @@
 package com.aitia.app.domain.insights
 
 import com.aitia.app.domain.model.Issue
+import com.google.ai.client.generativeai.GenerativeModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Instant
 
 data class AiChatMessage(
@@ -14,10 +17,53 @@ data class AiChatMessage(
 
 object LocalAiDebugAssistant {
 
+    private suspend fun callGemini(apiKey: String, prompt: String): AiChatMessage {
+        return try {
+            val generativeModel = GenerativeModel(
+                modelName = "gemini-1.5-flash",
+                apiKey = apiKey
+            )
+            val response = generativeModel.generateContent(prompt)
+            AiChatMessage(
+                isUser = false,
+                text = response.text ?: "No response from AI."
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            AiChatMessage(
+                isUser = false,
+                text = "Gemini API Error: ${e.message}\n\nPlease check your API key in Settings or ensure you have an active internet connection."
+            )
+        }
+    }
+
     /**
-     * Generates a comprehensive, contextual diagnostic breakdown using on-device heuristics and NLP patterns.
+     * Generates a comprehensive, contextual diagnostic breakdown using Gemini AI or on-device heuristics.
      */
-    fun analyzeIssue(issue: Issue): AiChatMessage {
+    suspend fun analyzeIssue(issue: Issue, apiKey: String): AiChatMessage = withContext(Dispatchers.Default) {
+        if (apiKey.isNotBlank()) {
+            val prompt = """
+                Analyze the following software defect. Provide a root cause analysis, plain English explanation, and a recommended code fix.
+                Title: ${issue.title}
+                Exception: ${issue.exceptionType}
+                Message: ${issue.errorMessage}
+                File: ${issue.sourceFile} at line ${issue.sourceLine}
+                Details: ${issue.technicalDetails}
+            """.trimIndent()
+            
+            val aiResponse = callGemini(apiKey, prompt)
+            
+            // Try to extract code block if present
+            val codeRegex = "```(?:kotlin|java|xml)?\\s*([\\s\\S]*?)\\s*```".toRegex()
+            val codeSnippet = codeRegex.find(aiResponse.text)?.groupValues?.get(1)
+            
+            return@withContext aiResponse.copy(
+                codeSnippet = codeSnippet,
+                suggestedAction = if (codeSnippet != null) "Apply Suggested Fix" else null
+            )
+        }
+
+        // Fallback offline heuristics
         val diagnosis = AitiaDiagnostician.diagnose(issue.exceptionType, "${issue.errorMessage} ${issue.technicalDetails}")
 
         val title = diagnosis?.title ?: "Uncategorized Defect"
@@ -46,7 +92,7 @@ object LocalAiDebugAssistant {
             }
         }
 
-        return AiChatMessage(
+        return@withContext AiChatMessage(
             isUser = false,
             text = responseText,
             codeSnippet = recommendedFix,
@@ -57,7 +103,7 @@ object LocalAiDebugAssistant {
     /**
      * Generates an automated Kotlin Unit Test (JUnit 4/5 + MockK/Robolectric) to reproduce and prevent regression.
      */
-    fun generateUnitTest(issue: Issue): AiChatMessage {
+    suspend fun generateUnitTest(issue: Issue): AiChatMessage = withContext(Dispatchers.Default) {
         val testClassName = if (issue.sourceFile.isNotBlank()) {
             issue.sourceFile.substringBeforeLast(".kt").substringBeforeLast(".java") + "Test"
         } else {
@@ -100,7 +146,7 @@ object LocalAiDebugAssistant {
             appendLine("}")
         }
 
-        return AiChatMessage(
+        return@withContext AiChatMessage(
             isUser = false,
             text = "Here is an automated regression unit test for **#${issue.id}: ${issue.title}**. You can add this test directly to your test suite to ensure this bug never happens again.",
             codeSnippet = unitTestCode,
@@ -111,7 +157,26 @@ object LocalAiDebugAssistant {
     /**
      * Responds to developer conversational queries about the defect.
      */
-    fun answerUserQuery(userQuery: String, issue: Issue): AiChatMessage {
+    suspend fun answerUserQuery(userQuery: String, issue: Issue, apiKey: String): AiChatMessage = withContext(Dispatchers.Default) {
+        if (apiKey.isNotBlank()) {
+            val prompt = """
+                You are a senior software engineer pair programming to debug an app.
+                The current defect is: ${issue.title} (${issue.exceptionType}: ${issue.errorMessage})
+                Technical context: ${issue.technicalDetails}
+                The user asks: "$userQuery"
+                Provide a concise, helpful response. If providing code, use markdown blocks.
+            """.trimIndent()
+            
+            val aiResponse = callGemini(apiKey, prompt)
+            val codeRegex = "```(?:kotlin|java|xml|bash)?\\s*([\\s\\S]*?)\\s*```".toRegex()
+            val codeSnippet = codeRegex.find(aiResponse.text)?.groupValues?.get(1)
+            
+            return@withContext aiResponse.copy(
+                codeSnippet = codeSnippet,
+                suggestedAction = if (codeSnippet != null) "Apply Solution" else null
+            )
+        }
+
         val queryLower = userQuery.lowercase()
         val diagnosis = AitiaDiagnostician.diagnose(issue.exceptionType, "${issue.errorMessage} ${issue.technicalDetails}")
 

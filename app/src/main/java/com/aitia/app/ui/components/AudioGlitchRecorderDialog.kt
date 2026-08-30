@@ -39,7 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,11 +71,11 @@ fun AudioGlitchRecorderDialog(
     val scope = rememberCoroutineScope()
     val audioHelper = remember { AudioRecorderHelper(context) }
 
-    val isRecording by audioHelper.isRecording.collectAsState()
-    val isPlaying by audioHelper.isPlaying.collectAsState()
-    val currentAmp by audioHelper.currentAmplitude.collectAsState()
-    val amplitudes by audioHelper.amplitudes.collectAsState()
-    val durationSeconds by audioHelper.durationSeconds.collectAsState()
+    val isRecording by audioHelper.isRecording.collectAsStateWithLifecycle()
+    val isPlaying by audioHelper.isPlaying.collectAsStateWithLifecycle()
+    val currentAmp by audioHelper.currentAmplitude.collectAsStateWithLifecycle()
+    val amplitudes by audioHelper.amplitudes.collectAsStateWithLifecycle()
+    val durationSeconds by audioHelper.durationSeconds.collectAsStateWithLifecycle()
 
     var recordedFile by remember { mutableStateOf<File?>(null) }
     var hasRecordPermission by remember {

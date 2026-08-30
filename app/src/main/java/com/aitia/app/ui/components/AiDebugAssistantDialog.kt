@@ -82,6 +82,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AiDebugAssistantDialog(
     issue: Issue,
+    geminiApiKey: String,
     onDismiss: () -> Unit,
     onApplySolution: (String) -> Unit
 ) {
@@ -91,8 +92,14 @@ fun AiDebugAssistantDialog(
     val listState = rememberLazyListState()
 
     val messages = remember {
-        mutableStateListOf<AiChatMessage>().apply {
-            add(LocalAiDebugAssistant.analyzeIssue(issue))
+        mutableStateListOf<AiChatMessage>()
+    }
+
+    LaunchedEffect(issue) {
+        if (messages.isEmpty()) {
+            isThinking = true
+            messages.add(LocalAiDebugAssistant.analyzeIssue(issue, geminiApiKey))
+            isThinking = false
         }
     }
 
@@ -108,7 +115,7 @@ fun AiDebugAssistantDialog(
 
         scope.launch {
             delay(400) // Realistic local inference micro-delay
-            val aiResponse = LocalAiDebugAssistant.answerUserQuery(query, issue)
+            val aiResponse = LocalAiDebugAssistant.answerUserQuery(query, issue, geminiApiKey)
             messages.add(aiResponse)
             isThinking = false
             listState.animateScrollToItem(messages.size - 1)

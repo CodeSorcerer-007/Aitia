@@ -16,8 +16,9 @@ import java.time.Instant
 
 import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.repository.EnvironmentRepository
+import javax.inject.Inject
 
-class TestingSessionRepositoryImpl(
+class TestingSessionRepositoryImpl @Inject constructor(
     private val sessionDao: TestingSessionDao,
     private val projectDao: ProjectDao,
     private val environmentDao: EnvironmentDao,
@@ -169,7 +170,7 @@ class TestingSessionRepositoryImpl(
 
 
 
-class EnvironmentRepositoryImpl(
+class EnvironmentRepositoryImpl @Inject constructor(
     private val environmentDao: EnvironmentDao
 ) : EnvironmentRepository {
 

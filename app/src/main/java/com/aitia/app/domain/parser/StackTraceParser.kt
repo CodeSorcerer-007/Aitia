@@ -1,5 +1,8 @@
 package com.aitia.app.domain.parser
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 data class ParsedStackTrace(
     val exceptionType: String? = null,
     val errorMessage: String? = null,
@@ -26,9 +29,9 @@ object StackTraceParser {
         RegexOption.IGNORE_CASE
     )
 
-    fun parse(rawText: String): ParsedStackTrace {
+    suspend fun parse(rawText: String): ParsedStackTrace = withContext(Dispatchers.Default) {
         if (rawText.isBlank()) {
-            return ParsedStackTrace()
+            return@withContext ParsedStackTrace()
         }
 
         var foundException: String? = null
@@ -109,7 +112,7 @@ object StackTraceParser {
 
         val isParsed = foundException != null || foundFile != null || foundMessage != null
 
-        return ParsedStackTrace(
+        return@withContext ParsedStackTrace(
             exceptionType = foundException,
             errorMessage = foundMessage,
             sourceFile = foundFile,

@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 data class AnalyticsUiState(
     val summary: AnalyticsSummary = AnalyticsSummary(),
@@ -21,7 +23,8 @@ data class AnalyticsUiState(
     val isLoading: Boolean = false
 )
 
-class AnalyticsViewModel(
+@HiltViewModel
+class AnalyticsViewModel @Inject constructor(
     private val issueRepository: IssueRepository,
     private val sessionRepository: TestingSessionRepository
 ) : ViewModel() {

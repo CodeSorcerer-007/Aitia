@@ -32,9 +32,16 @@ import com.aitia.app.ui.theme.AitiaTheme
 import android.annotation.SuppressLint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import com.aitia.app.data.preferences.UserPreferencesRepository
 
 @SuppressLint("InvalidFragmentVersionForActivityResult")
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var preferencesRepository: UserPreferencesRepository
 
     private val _quickCaptureTrigger = MutableStateFlow(false)
 
@@ -53,9 +60,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        val app = application as AitiaApplication
-        val appContainer = app.container
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -68,7 +72,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val scope = rememberCoroutineScope()
-            val preferences by appContainer.preferencesRepository.userPreferences.collectAsState(
+            val preferences by preferencesRepository.userPreferences.collectAsState(
                 initial = com.aitia.app.domain.model.UserPreferences()
             )
 
@@ -128,11 +132,10 @@ class MainActivity : ComponentActivity() {
                         )
                     } else {
                         AitiaNavHost(
-                            appContainer = appContainer,
                             hasCompletedOnboarding = preferences.hasCompletedOnboarding,
                             onCompleteOnboarding = {
                                 scope.launch {
-                                    appContainer.preferencesRepository.setOnboardingCompleted(true)
+                                    preferencesRepository.setOnboardingCompleted(true)
                                 }
                             },
                             initialTriggerQuickCapture = triggerQuickCapture

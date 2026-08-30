@@ -80,7 +80,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -160,16 +160,20 @@ fun IssueDetailScreen(
         viewModel.setIssueId(issueId)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val issue = uiState.issue
 
-    val notes by viewModel.getNotesFlow(issueId).collectAsState(initial = emptyList())
-    val attachments by viewModel.getAttachmentsFlow(issueId).collectAsState(initial = emptyList())
-    val checklist by viewModel.getChecklistFlow(issueId).collectAsState(initial = emptyList())
-    val relatedIssues by viewModel.getRelatedFlow(issueId).collectAsState(initial = emptyList())
-    val timeline by viewModel.getTimelineFlow(issueId).collectAsState(initial = emptyList())
-    val tags by viewModel.getTagsFlow(issueId).collectAsState(initial = emptyList())
-    val allTags by viewModel.getAllTagsFlow().collectAsState(initial = emptyList())
+    val notes by viewModel.getNotesFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
+    val attachments by viewModel.getAttachmentsFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
+    val checklist by viewModel.getChecklistFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
+    val relatedIssues by viewModel.getRelatedFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
+    val timeline by viewModel.getTimelineFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
+    val tags by viewModel.getTagsFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
+    val allTags by viewModel.getAllTagsFlow().collectAsStateWithLifecycle(initial = emptyList())
+    
+    val allIssues by viewModel.allIssuesFlow.collectAsStateWithLifecycle()
+    val projects by viewModel.projectsFlow.collectAsStateWithLifecycle()
+    val environments by viewModel.environmentsFlow.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -239,8 +243,8 @@ fun IssueDetailScreen(
         return
     }
 
-    val matchedFixes = remember(issue, uiState.allIssues) {
-        PreviousFixMatcher.findSimilarResolvedFixes(issue, uiState.allIssues)
+    val matchedFixes = remember(issue, allIssues) {
+        PreviousFixMatcher.findSimilarResolvedFixes(issue, allIssues)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1138,6 +1142,7 @@ fun IssueDetailScreen(
     if (showAiAssistantDialog) {
         AiDebugAssistantDialog(
             issue = issue,
+            geminiApiKey = viewModel.getGeminiApiKey(),
             onDismiss = { showAiAssistantDialog = false },
             onApplySolution = { generatedFix ->
                 showAiAssistantDialog = false
@@ -1149,6 +1154,8 @@ fun IssueDetailScreen(
     if (showGitHubPrDialog) {
         GitHubPrSyncDialog(
             issue = issue,
+            githubPat = viewModel.getGithubPat(),
+            defaultRepo = viewModel.getDefaultRepo(),
             onDismiss = { showGitHubPrDialog = false }
         )
     }

@@ -10,10 +10,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.Instant
+import javax.inject.Inject
 
 import com.aitia.app.domain.repository.ProjectRepository
 
-class ProjectRepositoryImpl(
+class ProjectRepositoryImpl @Inject constructor(
     private val projectDao: ProjectDao,
     private val issueDao: IssueDao
 ) : ProjectRepository {

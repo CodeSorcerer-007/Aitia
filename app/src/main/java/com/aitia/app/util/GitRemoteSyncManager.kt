@@ -1,6 +1,14 @@
 package com.aitia.app.util
 
 import com.aitia.app.domain.model.Issue
+import com.aitia.app.data.remote.GitHubApiService
+import com.aitia.app.data.remote.GitHubIssueRequest
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import retrofit2.Retrofit
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -91,5 +99,52 @@ object GitRemoteSyncManager {
             githubWebUrl = githubWebUrl,
             gitlabWebUrl = gitlabWebUrl
         )
+    }
+
+    /**
+     * Instantly creates a GitHub Issue via REST API using the user's PAT.
+     */
+    suspend fun createGitHubIssue(
+        issue: Issue,
+        githubPat: String,
+        defaultRepo: String
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            if (githubPat.isBlank() || defaultRepo.isBlank() || !defaultRepo.contains("/")) {
+                return@withContext Result.failure(Exception("GitHub PAT or Default Repo is missing/invalid."))
+            }
+
+            val parts = defaultRepo.split("/")
+            val owner = parts[0]
+            val repo = parts[1]
+
+            val json = Json { ignoreUnknownKeys = true }
+            val contentType = "application/json".toMediaType()
+            val retrofit = Retrofit.Builder()
+                .baseUrl("https://api.github.com/")
+                .addConverterFactory(json.asConverterFactory(contentType))
+                .build()
+
+            val api = retrofit.create(GitHubApiService::class.java)
+
+            val prPayload = generatePullRequestPayload(issue, owner, repo)
+            val request = GitHubIssueRequest(
+                title = "Bug: ${issue.title}",
+                body = prPayload.prBodyMarkdown,
+                labels = listOf("bug", "aitia")
+            )
+
+            val response = api.createIssue(
+                token = "Bearer $githubPat",
+                owner = owner,
+                repo = repo,
+                request = request
+            )
+            
+            Result.success(response.html_url)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
     }
 }

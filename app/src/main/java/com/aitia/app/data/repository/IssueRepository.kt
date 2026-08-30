@@ -36,10 +36,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Duration
 import java.time.Instant
+import javax.inject.Inject
 
 import com.aitia.app.domain.repository.IssueRepository
 
-class IssueRepositoryImpl(
+class IssueRepositoryImpl @Inject constructor(
     private val issueDao: IssueDao,
     private val projectDao: ProjectDao,
     private val sessionDao: TestingSessionDao,

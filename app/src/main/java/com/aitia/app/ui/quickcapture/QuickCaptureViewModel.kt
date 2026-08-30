@@ -17,6 +17,7 @@ import com.aitia.app.domain.repository.ProjectRepository
 import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.similarity.DuplicateDetectionEngine
 import com.aitia.app.domain.similarity.DuplicateMatch
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
+import javax.inject.Inject
 
 data class QuickCaptureUiState(
     val title: String = "",
@@ -42,7 +44,8 @@ data class QuickCaptureUiState(
     val isSaving: Boolean = false
 )
 
-class QuickCaptureViewModel(
+@HiltViewModel
+class QuickCaptureViewModel @Inject constructor(
     private val issueRepository: IssueRepository,
     private val projectRepository: ProjectRepository,
     private val sessionRepository: TestingSessionRepository,

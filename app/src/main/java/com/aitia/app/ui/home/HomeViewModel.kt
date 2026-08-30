@@ -12,11 +12,13 @@ import com.aitia.app.domain.model.TestingSession
 import com.aitia.app.domain.repository.IssueRepository
 import com.aitia.app.domain.repository.ProjectRepository
 import com.aitia.app.domain.repository.TestingSessionRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class HomeUiState(
     val recentIssues: List<Issue> = emptyList(),
@@ -29,7 +31,8 @@ data class HomeUiState(
     val isLoading: Boolean = false
 )
 
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val issueRepository: IssueRepository,
     private val projectRepository: ProjectRepository,
     private val sessionRepository: TestingSessionRepository,

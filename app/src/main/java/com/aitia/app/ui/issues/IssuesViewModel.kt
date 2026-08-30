@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 enum class IssueSortOption(val displayName: String) {
     RECENTLY_UPDATED("Recently Updated"),
@@ -33,7 +35,8 @@ data class IssuesUiState(
     val isLoading: Boolean = false
 )
 
-class IssuesViewModel(
+@HiltViewModel
+class IssuesViewModel @Inject constructor(
     private val issueRepository: IssueRepository,
     private val projectRepository: ProjectRepository
 ) : ViewModel() {

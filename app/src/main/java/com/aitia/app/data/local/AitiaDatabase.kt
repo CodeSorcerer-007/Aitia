@@ -19,6 +19,7 @@ import com.aitia.app.data.local.entity.AttachmentEntity
 import com.aitia.app.data.local.entity.ChecklistItemEntity
 import com.aitia.app.data.local.entity.EnvironmentProfileEntity
 import com.aitia.app.data.local.entity.IssueEntity
+import com.aitia.app.data.local.entity.IssueFtsEntity
 import com.aitia.app.data.local.entity.IssueNoteEntity
 import com.aitia.app.data.local.entity.IssueTagCrossRef
 import com.aitia.app.data.local.entity.IssueTimelineEventEntity
@@ -35,6 +36,7 @@ import com.aitia.app.data.local.entity.TestingSessionEntity
         EnvironmentProfileEntity::class,
         TestingSessionEntity::class,
         IssueEntity::class,
+        IssueFtsEntity::class,
         IssueNoteEntity::class,
         AttachmentEntity::class,
         TagEntity::class,
@@ -43,7 +45,7 @@ import com.aitia.app.data.local.entity.TestingSessionEntity
         ChecklistItemEntity::class,
         IssueTimelineEventEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -70,6 +72,13 @@ abstract class AitiaDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `issues_fts` USING FTS4(`title`, `description`, `screen`, `technicalDetails`, `errorMessage`, `exceptionType`, `suspectedCause`, `solution`, content=`issues`)")
+                db.execSQL("INSERT INTO issues_fts(issues_fts, `docid`, `title`, `description`, `screen`, `technicalDetails`, `errorMessage`, `exceptionType`, `suspectedCause`, `solution`) SELECT 'rebuild', `id`, `title`, `description`, `screen`, `technicalDetails`, `errorMessage`, `exceptionType`, `suspectedCause`, `solution` FROM issues")
+            }
+        }
+
         fun getDatabase(context: Context): AitiaDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -77,7 +86,7 @@ abstract class AitiaDatabase : RoomDatabase() {
                     AitiaDatabase::class.java,
                     "aitia.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

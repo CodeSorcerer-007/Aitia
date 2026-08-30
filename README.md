@@ -10,6 +10,7 @@
 <p align="center">
   <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.0.21-purple.svg" alt="Kotlin" /></a>
   <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4.svg" alt="Jetpack Compose" /></a>
+  <a href="https://dagger.dev/hilt/"><img src="https://img.shields.io/badge/Dagger%20Hilt-2.51.1-red.svg" alt="Dagger Hilt" /></a>
   <a href="https://developer.android.com/training/data-storage/room"><img src="https://img.shields.io/badge/Room-2.6.1-orange.svg" alt="Room" /></a>
   <a href="https://aitia.dev"><img src="https://img.shields.io/badge/Privacy-100%25%20Offline-green.svg" alt="Offline First" /></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-8.0%20to%2016-brightgreen.svg" alt="Android" /></a>
@@ -66,17 +67,23 @@ Aitia is a native, offline-first developer issue tracker and debugging journal d
 ### 📊 4. Local Diagnostic Insights & Analytics
 - 100% local rule-based intelligence: Crash hotspot detection, category regression risks, unresolved critical defect warnings, and average resolution time tracking.
 
-### 🔒 5. Privacy-First & App Lock Protection
-- **Zero Cloud Tracking**: All stack traces, source code snippets, and private bug notes stay 100% on-device in local SQLite/Room.
-- **Lifecycle-Aware App Lock**: Keypad PIN & Biometric protection overlay. Instantly secures your data not just on cold starts, but every time the app goes to the background.
-- **Minimal Permissions**: No broad storage access required. Uses modern `PickVisualMedia` API and dynamically asks for `POST_NOTIFICATIONS` on Android 13+ only when needed.
+### 🤖 5. True AI Debugging (Gemini 1.5 Flash)
+- **Generative AI Assistant:** Securely input your Gemini API Key in Settings to enable the AI Debug Assistant. It analyzes your crash logs, suggests actionable steps, and answers conversational queries contextually. If offline, it gracefully falls back to local heuristics.
 
-### 💾 6. Full Data Portability & Export
-- **JSON Backup**: Full versioned database export & import with schema integrity.
-- **Markdown Reports**: Formatted defect reports for pasting into GitHub Issues, Notion, Slack, or email.
-- **CSV Export**: Clean tabular data for spreadsheets.
+### 🌐 6. GitHub API Sync
+- **1-Click Publish:** Authenticate with a GitHub PAT securely stored in EncryptedSharedPreferences to instantly publish local issues as GitHub Issues on your remote repository via Retrofit.
 
-### 🎨 7. Visual Themes & Motion Design (OLED 0% Battery Optimization)
+### 🔒 7. Privacy-First & App Lock Protection
+- **Zero Cloud Tracking:** All stack traces, source code snippets, and private bug notes stay 100% on-device in local SQLite/Room (unless explicitly published to GitHub or analyzed by Gemini).
+- **Lifecycle-Aware App Lock:** Keypad PIN & Biometric protection overlay. Instantly secures your data not just on cold starts, but every time the app goes to the background.
+- **Secure Storage:** Uses Android Jetpack Security's `EncryptedSharedPreferences` for API keys.
+
+### 💾 8. Full Data Portability & Export
+- **JSON Backup via SAF:** Full versioned database export & import with schema integrity using Android Storage Access Framework natively.
+- **Markdown Reports:** Formatted defect reports for pasting into Notion, Slack, or email.
+- **CSV Export:** Clean tabular data for spreadsheets.
+
+### 🎨 9. Visual Themes & Motion Design (OLED 0% Battery Optimization)
 - **4 Dedicated Pitch-Black OLED Developer Themes**:
   - **Obsidian Blue**: Pure `#000000` pitch black with Electric Blue accents and neon borders.
   - **Cyberpunk Matrix**: Matrix Emerald (`#00FF88`) & Laser Cyan (`#00F0FF`) on pure black.
@@ -86,7 +93,7 @@ Aitia is a native, offline-first developer issue tracker and debugging journal d
 - **Animated Aitia Logo**: Custom breathing scale pulse with a rotating sweep gradient aura during loading & demo data seeding.
 - **Haptics**: Tactile vibration feedback on button presses, status transitions, and verified milestones.
 
-### ⚡ 8. Android Home-Screen Widget
+### ⚡ 10. Android Home-Screen Widget
 - Jetpack Glance widget with open & critical counters and a 1-tap Quick Capture shortcut.
 
 ---
@@ -96,10 +103,13 @@ Aitia is a native, offline-first developer issue tracker and debugging journal d
 - **Language**: Kotlin 2.0.21
 - **UI Toolkit**: Jetpack Compose + Material 3 (Compose BOM 2024.11.00)
 - **Architecture**: Clean Architecture + MVVM + Repository Pattern
+- **Dependency Injection**: Dagger Hilt 2.51.1
 - **Local Persistence**: Room Database 2.6.1 + KSP
-- **Key-Value Storage**: Jetpack DataStore Preferences
+- **Networking & AI**: Retrofit 2.11.0, OkHttp 4.12.0, Google Generative AI SDK
+- **Key-Value Storage**: Jetpack DataStore Preferences + Jetpack Security EncryptedSharedPreferences
 - **Asynchrony**: Kotlin Coroutines + StateFlow
 - **Navigation**: Jetpack Navigation Compose 2.8.4
+- **Testing**: MockK, Turbine, JUnit, Espresso, Hilt Testing
 - **Home Widget**: AndroidX Glance AppWidget 1.1.1
 - **Security**: AndroidX Biometric 1.2.0
 

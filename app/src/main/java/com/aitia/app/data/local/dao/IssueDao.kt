@@ -40,18 +40,10 @@ interface IssueDao {
     fun getIssuesForSession(sessionId: Long): Flow<List<IssueEntity>>
 
     @Query("""
-        SELECT * FROM issues 
-        WHERE isArchived = 0 AND (
-            title LIKE '%' || :query || '%' OR 
-            description LIKE '%' || :query || '%' OR 
-            screen LIKE '%' || :query || '%' OR 
-            technicalDetails LIKE '%' || :query || '%' OR 
-            errorMessage LIKE '%' || :query || '%' OR 
-            exceptionType LIKE '%' || :query || '%' OR 
-            suspectedCause LIKE '%' || :query || '%' OR 
-            solution LIKE '%' || :query || '%'
-        )
-        ORDER BY isPinned DESC, createdAt DESC
+        SELECT issues.* FROM issues 
+        JOIN issues_fts ON issues.id = issues_fts.docid 
+        WHERE issues.isArchived = 0 AND issues_fts MATCH :query || '*'
+        ORDER BY issues.isPinned DESC, issues.createdAt DESC
     """)
     fun searchIssues(query: String): Flow<List<IssueEntity>>
 

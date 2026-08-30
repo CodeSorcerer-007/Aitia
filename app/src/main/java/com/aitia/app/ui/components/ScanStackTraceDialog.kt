@@ -76,6 +76,7 @@ fun ScanStackTraceDialog(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     var isProcessing by remember { mutableStateOf(false) }
     var recognizedRawText by remember { mutableStateOf("") }
@@ -100,7 +101,9 @@ fun ScanStackTraceDialog(
                         .addOnSuccessListener { visionText ->
                             isProcessing = false
                             recognizedRawText = visionText.text
-                            parsedResult = StackTraceParser.parse(visionText.text)
+                            scope.launch {
+                                parsedResult = StackTraceParser.parse(visionText.text)
+                            }
                         }
                         .addOnFailureListener {
                             isProcessing = false
@@ -347,7 +350,9 @@ fun ScanStackTraceDialog(
                                                         .addOnSuccessListener { visionText ->
                                                             isProcessing = false
                                                             recognizedRawText = visionText.text
-                                                            parsedResult = StackTraceParser.parse(visionText.text)
+                                                            scope.launch {
+                                                                parsedResult = StackTraceParser.parse(visionText.text)
+                                                            }
                                                             imageProxy.close()
                                                         }
                                                         .addOnFailureListener {

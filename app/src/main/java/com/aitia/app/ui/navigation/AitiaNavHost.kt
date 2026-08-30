@@ -3,7 +3,7 @@ package com.aitia.app.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,8 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.aitia.app.di.AppContainer
-import com.aitia.app.di.ViewModelFactory
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.aitia.app.domain.model.IssueType
 import com.aitia.app.ui.analytics.AnalyticsScreen
 import com.aitia.app.ui.analytics.AnalyticsViewModel
@@ -41,13 +40,11 @@ import com.aitia.app.ui.settings.SettingsViewModel
 
 @Composable
 fun AitiaNavHost(
-    appContainer: AppContainer,
     hasCompletedOnboarding: Boolean,
     onCompleteOnboarding: () -> Unit,
     initialTriggerQuickCapture: Boolean = false,
     navController: NavHostController = rememberNavController()
 ) {
-    val factory = remember { ViewModelFactory(appContainer) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
@@ -58,7 +55,7 @@ fun AitiaNavHost(
             isQuickCaptureOpen = true
         }
     }
-    val quickCaptureViewModel: QuickCaptureViewModel = viewModel(factory = factory)
+    val quickCaptureViewModel: QuickCaptureViewModel = hiltViewModel()
 
     val showBottomBar = currentRoute in listOf(
         Screen.Home.route,
@@ -103,7 +100,7 @@ fun AitiaNavHost(
 
             // 2. Home Screen
             composable(Screen.Home.route) {
-                val homeViewModel: HomeViewModel = viewModel(factory = factory)
+                val homeViewModel: HomeViewModel = hiltViewModel()
                 HomeScreen(
                     viewModel = homeViewModel,
                     onNavigateToIssueDetail = { id ->
@@ -124,7 +121,7 @@ fun AitiaNavHost(
 
             // 3. Issues Screen
             composable(Screen.Issues.route) {
-                val issuesViewModel: IssuesViewModel = viewModel(factory = factory)
+                val issuesViewModel: IssuesViewModel = hiltViewModel()
                 IssuesScreen(
                     viewModel = issuesViewModel,
                     onNavigateToIssueDetail = { id ->
@@ -136,7 +133,7 @@ fun AitiaNavHost(
 
             // 4. Projects Screen
             composable(Screen.Projects.route) {
-                val projectsViewModel: ProjectsViewModel = viewModel(factory = factory)
+                val projectsViewModel: ProjectsViewModel = hiltViewModel()
                 ProjectsScreen(
                     viewModel = projectsViewModel,
                     onNavigateToProjectDetail = { id ->
@@ -154,10 +151,10 @@ fun AitiaNavHost(
                 arguments = listOf(navArgument("projectId") { type = NavType.LongType })
             ) { backStackEntry ->
                 val projectId = backStackEntry.arguments?.getLong("projectId") ?: 0L
-                val projectsViewModel: ProjectsViewModel = viewModel(factory = factory)
-                val projectsUiState by projectsViewModel.uiState.collectAsState()
-                val issuesViewModel: IssuesViewModel = viewModel(factory = factory)
-                val issuesUiState by issuesViewModel.uiState.collectAsState()
+                val projectsViewModel: ProjectsViewModel = hiltViewModel()
+                val projectsUiState by projectsViewModel.uiState.collectAsStateWithLifecycle()
+                val issuesViewModel: IssuesViewModel = hiltViewModel()
+                val issuesUiState by issuesViewModel.uiState.collectAsStateWithLifecycle()
 
                 val project = projectsUiState.projects.firstOrNull { it.id == projectId }
                 val projectIssues = issuesUiState.issues.filter { it.projectId == projectId }
@@ -176,7 +173,7 @@ fun AitiaNavHost(
 
             // 6. Analytics Screen
             composable(Screen.Analytics.route) {
-                val analyticsViewModel: AnalyticsViewModel = viewModel(factory = factory)
+                val analyticsViewModel: AnalyticsViewModel = hiltViewModel()
                 AnalyticsScreen(
                     viewModel = analyticsViewModel,
                     onNavigateToIssueDetail = { id ->
@@ -187,7 +184,7 @@ fun AitiaNavHost(
 
             // 7. Settings Screen
             composable(Screen.Settings.route) {
-                val settingsViewModel: SettingsViewModel = viewModel(factory = factory)
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     onNavigateBack = { navController.popBackStack() }
@@ -200,7 +197,7 @@ fun AitiaNavHost(
                 arguments = listOf(navArgument("issueId") { type = NavType.LongType })
             ) { backStackEntry ->
                 val issueId = backStackEntry.arguments?.getLong("issueId") ?: 0L
-                val detailViewModel: IssueDetailViewModel = viewModel(factory = factory)
+                val detailViewModel: IssueDetailViewModel = hiltViewModel()
                 IssueDetailScreen(
                     issueId = issueId,
                     viewModel = detailViewModel,
@@ -214,10 +211,10 @@ fun AitiaNavHost(
                 arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
             ) { backStackEntry ->
                 val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: 0L
-                val projectsViewModel: ProjectsViewModel = viewModel(factory = factory)
-                val projectsUiState by projectsViewModel.uiState.collectAsState()
-                val issuesViewModel: IssuesViewModel = viewModel(factory = factory)
-                val issuesUiState by issuesViewModel.uiState.collectAsState()
+                val projectsViewModel: ProjectsViewModel = hiltViewModel()
+                val projectsUiState by projectsViewModel.uiState.collectAsStateWithLifecycle()
+                val issuesViewModel: IssuesViewModel = hiltViewModel()
+                val issuesUiState by issuesViewModel.uiState.collectAsStateWithLifecycle()
 
                 val session = projectsUiState.sessions.firstOrNull { it.id == sessionId }
                 val sessionIssues = issuesUiState.issues.filter { it.testingSessionId == sessionId }

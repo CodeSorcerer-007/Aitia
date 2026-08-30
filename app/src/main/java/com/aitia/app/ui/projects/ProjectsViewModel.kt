@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 data class ProjectsUiState(
     val projects: List<Project> = emptyList(),
@@ -23,7 +25,8 @@ data class ProjectsUiState(
     val isLoading: Boolean = false
 )
 
-class ProjectsViewModel(
+@HiltViewModel
+class ProjectsViewModel @Inject constructor(
     private val projectRepository: ProjectRepository,
     private val environmentRepository: EnvironmentRepository,
     private val sessionRepository: TestingSessionRepository
