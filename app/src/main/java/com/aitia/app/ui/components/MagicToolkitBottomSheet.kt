@@ -51,6 +51,9 @@ import com.aitia.app.util.rememberHapticFeedback
 @Composable
 fun MagicToolkitBottomSheet(
     onDismiss: () -> Unit,
+    onLaunchAiAssistant: () -> Unit,
+    onLaunchGitHubPr: () -> Unit,
+    onLaunchWirelessAdb: () -> Unit,
     onLaunchCameraMarkup: () -> Unit,
     onLaunchOcrScan: () -> Unit,
     onLaunchVoiceSteps: () -> Unit,
@@ -107,12 +110,55 @@ fun MagicToolkitBottomSheet(
                         color = Color.White
                     )
                     Text(
-                        text = "Tap any tool to capture, scan, or diagnose effortlessly",
+                        text = "Tap any superpower to debug, generate fixes, or sync remotely",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF8B949E)
                     )
                 }
             }
+
+            Text(
+                text = "AI TRIAGE & REMOTE WORKFLOWS",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF8B949E),
+                fontWeight = FontWeight.Bold
+            )
+
+            // 1. AI Assistant
+            MagicToolCard(
+                title = "🤖 Local AI Debug Assistant",
+                subtitle = "Ask AI to diagnose root causes, generate Kotlin fixes, and write regression tests",
+                accentColor = Color(0xFF00F0FF),
+                onClick = {
+                    haptic.lightTap()
+                    onDismiss()
+                    onLaunchAiAssistant()
+                }
+            )
+
+            // 2. GitHub PR Sync
+            MagicToolCard(
+                title = "🐙 GitHub & GitLab PR Creator",
+                subtitle = "Generate branch names, PR titles, and full Markdown PR bodies with 1 tap",
+                accentColor = Color(0xFFBC8CFF),
+                onClick = {
+                    haptic.lightTap()
+                    onDismiss()
+                    onLaunchGitHubPr()
+                }
+            )
+
+            // 3. Wireless ADB Harvester
+            MagicToolCard(
+                title = "📶 Wireless ADB Harvester",
+                subtitle = "Pair over Wi-Fi (Android 11+) and capture logcat from secondary test devices",
+                accentColor = Color(0xFF00FF88),
+                onClick = {
+                    haptic.lightTap()
+                    onDismiss()
+                    onLaunchWirelessAdb()
+                }
+            )
 
             Text(
                 text = "INSTANT CAPTURE & VISION",
@@ -121,7 +167,7 @@ fun MagicToolkitBottomSheet(
                 fontWeight = FontWeight.Bold
             )
 
-            // 1. Camera + Markup
+            // 4. Camera + Markup
             MagicToolCard(
                 title = "📸 Snap & Draw on Screen",
                 subtitle = "Take a photo & circle the bug with arrows, boxes, or blur keys",
@@ -133,7 +179,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 2. OCR Scan-to-StackTrace
+            // 5. OCR Scan-to-StackTrace
             MagicToolCard(
                 title = "🔍 Scan Terminal / Screen Error",
                 subtitle = "Point camera at your computer screen or logs to auto-extract error",
@@ -145,7 +191,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 3. Compare Design vs Reality
+            // 6. Compare Design vs Reality
             MagicToolCard(
                 title = "🔀 Compare Design vs Reality",
                 subtitle = "Slide between Figma mockup and actual screenshot to spot pixel drift",
@@ -164,7 +210,7 @@ fun MagicToolkitBottomSheet(
                 fontWeight = FontWeight.Bold
             )
 
-            // 4. Voice Steps
+            // 7. Voice Steps
             MagicToolCard(
                 title = "🎙️ Speak Steps (Hands-Free)",
                 subtitle = "Dictate reproduction steps while testing the device",
@@ -176,7 +222,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 5. Audio Glitch
+            // 8. Audio Glitch
             MagicToolCard(
                 title = "🎵 Record Audio Glitch / Memo",
                 subtitle = "Record speaker crackle or audio bugs with live waveform visualization",
@@ -195,7 +241,7 @@ fun MagicToolkitBottomSheet(
                 fontWeight = FontWeight.Bold
             )
 
-            // 6. Device Vitals
+            // 9. Device Vitals
             MagicToolCard(
                 title = "⚡ Snapshot Device Specs & Battery",
                 subtitle = "Log RAM, battery temp (°C), 120Hz display status, and storage",
@@ -207,7 +253,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 7. Logcat Dump
+            // 10. Logcat Dump
             MagicToolCard(
                 title = "📋 Grab Crash Logs (Auto)",
                 subtitle = "Instantly reads recent device fatal errors without tethering",
@@ -219,7 +265,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 8. cURL Inspector
+            // 11. cURL Inspector
             MagicToolCard(
                 title = "🌐 Network / cURL Inspector",
                 subtitle = "Format JSON payloads and generate ready-to-run cURL commands",
@@ -231,7 +277,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 9. Bug Card Share
+            // 12. Bug Card Share
             MagicToolCard(
                 title = "🎟️ Share OLED Bug Card",
                 subtitle = "Export a stylized dark ticket card with QR code to Slack or Jira",
@@ -243,7 +289,7 @@ fun MagicToolkitBottomSheet(
                 }
             )
 
-            // 10. Barcode Scanner
+            // 13. Barcode Scanner
             MagicToolCard(
                 title = "🏷️ Scan Test Device Asset Tag",
                 subtitle = "Scan device QR code or barcode to link hardware IDs",

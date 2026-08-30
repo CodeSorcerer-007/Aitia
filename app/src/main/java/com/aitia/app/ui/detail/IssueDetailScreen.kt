@@ -105,6 +105,7 @@ import com.aitia.app.domain.model.RelationshipType
 import com.aitia.app.domain.model.Tag
 import com.aitia.app.domain.model.TimelineEvent
 import com.aitia.app.domain.similarity.PreviousFixMatcher
+import com.aitia.app.ui.components.AiDebugAssistantDialog
 import com.aitia.app.ui.components.AitiaCameraCaptureDialog
 import com.aitia.app.ui.components.AudioGlitchRecorderDialog
 import com.aitia.app.ui.components.BarcodeScannerDialog
@@ -117,6 +118,7 @@ import com.aitia.app.ui.components.DeviceVitalsCard
 import com.aitia.app.ui.components.EmptyStateView
 import com.aitia.app.ui.components.FeatureTourDialog
 import com.aitia.app.ui.components.GitCommitDialog
+import com.aitia.app.ui.components.GitHubPrSyncDialog
 import com.aitia.app.ui.components.MagicToolkitBottomSheet
 import com.aitia.app.ui.components.NetworkCurlInspectorDialog
 import com.aitia.app.ui.components.PreviousFixBanner
@@ -128,6 +130,7 @@ import com.aitia.app.ui.components.StatusFlowBar
 import com.aitia.app.ui.components.TypeBadge
 import com.aitia.app.ui.components.VisualRegressionCompareDialog
 import com.aitia.app.ui.components.VoiceReproStepsDialog
+import com.aitia.app.ui.components.WirelessAdbDialog
 import com.aitia.app.ui.theme.AitiaBlue
 import com.aitia.app.ui.theme.AitiaPurple
 import com.aitia.app.ui.theme.LocalExtendedColors
@@ -175,6 +178,9 @@ fun IssueDetailScreen(
     var showConfetti by remember { mutableStateOf(false) }
     var showMagicToolkit by remember { mutableStateOf(false) }
     var showTourDialog by remember { mutableStateOf(false) }
+    var showAiAssistantDialog by remember { mutableStateOf(false) }
+    var showGitHubPrDialog by remember { mutableStateOf(false) }
+    var showWirelessAdbDialog by remember { mutableStateOf(false) }
 
     // Advanced Developer & QA Real-Life Features Dialog States
     var showCameraCaptureDialog by remember { mutableStateOf(false) }
@@ -541,6 +547,37 @@ fun IssueDetailScreen(
                                         viewModel.updateIssueField { it.copy(solution = codeSnippet) }
                                     }
                                 )
+                            }
+
+                            // AI Triage & PR Sync Action Row
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            haptic.lightTap()
+                                            showAiAssistantDialog = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00F0FF)),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("🤖 Ask Local AI Assistant", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            haptic.lightTap()
+                                            showGitHubPrDialog = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("🐙 PR Sync", color = Color(0xFFBC8CFF), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
                             }
 
                             // 3. Description
@@ -1066,6 +1103,9 @@ fun IssueDetailScreen(
     if (showMagicToolkit) {
         MagicToolkitBottomSheet(
             onDismiss = { showMagicToolkit = false },
+            onLaunchAiAssistant = { showAiAssistantDialog = true },
+            onLaunchGitHubPr = { showGitHubPrDialog = true },
+            onLaunchWirelessAdb = { showWirelessAdbDialog = true },
             onLaunchCameraMarkup = { showCameraCaptureDialog = true },
             onLaunchOcrScan = { showScanOcrDialog = true },
             onLaunchVoiceSteps = { showVoiceStepsDialog = true },
@@ -1088,6 +1128,30 @@ fun IssueDetailScreen(
             onLaunchCurlInspector = { showCurlInspectorDialog = true },
             onLaunchShareBugCard = { showBugCardShareDialog = true },
             onLaunchBarcodeScanner = { showBarcodeScannerDialog = true }
+        )
+    }
+
+    if (showAiAssistantDialog) {
+        AiDebugAssistantDialog(
+            issue = issue,
+            onDismiss = { showAiAssistantDialog = false },
+            onApplySolution = { generatedFix ->
+                showAiAssistantDialog = false
+                viewModel.updateIssueField { it.copy(solution = generatedFix) }
+            }
+        )
+    }
+
+    if (showGitHubPrDialog) {
+        GitHubPrSyncDialog(
+            issue = issue,
+            onDismiss = { showGitHubPrDialog = false }
+        )
+    }
+
+    if (showWirelessAdbDialog) {
+        WirelessAdbDialog(
+            onDismiss = { showWirelessAdbDialog = false }
         )
     }
 
