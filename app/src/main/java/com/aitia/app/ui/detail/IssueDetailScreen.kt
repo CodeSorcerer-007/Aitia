@@ -1,6 +1,8 @@
 package com.aitia.app.ui.detail
 
+import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -22,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,18 +31,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AlertDialog
@@ -53,17 +61,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -81,11 +91,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.aitia.app.domain.model.Attachment
 import com.aitia.app.domain.model.ChecklistItem
 import com.aitia.app.domain.model.Issue
@@ -103,10 +111,13 @@ import com.aitia.app.ui.components.BarcodeScannerDialog
 import com.aitia.app.ui.components.BugCardShareDialog
 import com.aitia.app.ui.components.ChecklistComponent
 import com.aitia.app.ui.components.CodeViewer
+import com.aitia.app.ui.components.ConfettiEffect
 import com.aitia.app.ui.components.CrossDeviceVerificationMatrix
 import com.aitia.app.ui.components.DeviceVitalsCard
 import com.aitia.app.ui.components.EmptyStateView
+import com.aitia.app.ui.components.FeatureTourDialog
 import com.aitia.app.ui.components.GitCommitDialog
+import com.aitia.app.ui.components.MagicToolkitBottomSheet
 import com.aitia.app.ui.components.NetworkCurlInspectorDialog
 import com.aitia.app.ui.components.PreviousFixBanner
 import com.aitia.app.ui.components.PriorityBadge
@@ -161,6 +172,9 @@ fun IssueDetailScreen(
     var showAddTagDialog by remember { mutableStateOf(false) }
     var viewingAttachment by remember { mutableStateOf<Attachment?>(null) }
     var showResolutionPrompt by remember { mutableStateOf(false) }
+    var showConfetti by remember { mutableStateOf(false) }
+    var showMagicToolkit by remember { mutableStateOf(false) }
+    var showTourDialog by remember { mutableStateOf(false) }
 
     // Advanced Developer & QA Real-Life Features Dialog States
     var showCameraCaptureDialog by remember { mutableStateOf(false) }
@@ -205,11 +219,12 @@ fun IssueDetailScreen(
         }
     }
 
-    val tabs = listOf("Overview", "Logs & Diagnostics", "Investigation & Tasks", "Root Cause & Fix", "History & Relations")
+    // Streamlined 3-Tab Structure: Simple, Intuitive, Friendly
+    val tabs = listOf("Overview & Fix", "Diagnostics & Specs", "Activity & Notes")
 
     if (issue == null) {
         com.aitia.app.ui.components.AitiaLoadingScreen(
-            message = "Loading defect workbench...",
+            message = "Loading defect details...",
             modifier = Modifier.fillMaxSize()
         )
         return
@@ -219,345 +234,324 @@ fun IssueDetailScreen(
         PreviousFixMatcher.findSimilarResolvedFixes(issue, uiState.allIssues)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "#${issue.id} · ${issue.type.displayName}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    // Export Visual Bug Card (PNG)
-                    IconButton(onClick = {
-                        haptic.lightTap()
-                        showBugCardShareDialog = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Export Bug Card",
-                            tint = Color(0xFF00FF88)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "#${issue.id} · ${issue.type.displayName}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-
-                    // Pin toggle
-                    IconButton(onClick = {
-                        haptic.lightTap()
-                        viewModel.togglePinned()
-                    }) {
-                        Icon(
-                            imageVector = if (issue.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                            contentDescription = "Pin",
-                            tint = if (issue.isPinned) AitiaBlue else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Archive toggle
-                    IconButton(onClick = {
-                        haptic.lightTap()
-                        viewModel.toggleArchived()
-                    }) {
-                        Icon(
-                            imageVector = if (issue.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
-                            contentDescription = "Archive",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Delete
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = extendedColors.priorityCritical
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // 1. Status Flow Pipeline Bar
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(
-                        text = "LIFECYCLE STATUS PIPELINE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    StatusFlowBar(
-                        currentStatus = issue.status,
-                        onStatusSelected = { newStatus ->
-                            viewModel.updateStatus(newStatus)
-                            if (newStatus == IssueStatus.FIXED || newStatus == IssueStatus.VERIFIED) {
-                                showResolutionPrompt = true
-                            }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
                         }
-                    )
-                }
-            }
-
-            // 2. Title & Tags Header
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth(),
-                tonalElevation = 1.dp
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TypeBadge(type = issue.type)
-                        PriorityBadge(priority = issue.priority)
-                        StatusBadge(status = issue.status)
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = issue.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    // Tags row
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        tags.forEach { tag ->
-                            Surface(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .clickable { viewModel.removeTag(tag.id) },
-                                color = AitiaBlue.copy(alpha = 0.15f)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "#${tag.name}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = AitiaBlue,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Remove Tag",
-                                        tint = AitiaBlue,
-                                        modifier = Modifier.size(10.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        Text(
-                            text = "+ Tag",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { showAddTagDialog = true }
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (issue.projectName != null) "Project: ${issue.projectName}" else "No Project",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Created: ${DateFormatter.formatAbsolute(issue.createdAt)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // 3. Tab Row
-            ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = AitiaBlue,
-                edgePadding = 16.dp
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = {
+                    },
+                    actions = {
+                        // Help / How to use
+                        IconButton(onClick = {
                             haptic.lightTap()
-                            selectedTabIndex = index
-                        },
-                        text = {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
+                            showTourDialog = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = "How to Use",
+                                tint = Color(0xFF00E5FF)
                             )
                         }
-                    )
-                }
-            }
 
-            // 4. Tab Content
-            LazyColumn(
+                        // Export Visual Bug Card (PNG)
+                        IconButton(onClick = {
+                            haptic.lightTap()
+                            showBugCardShareDialog = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Export Bug Card",
+                                tint = Color(0xFF00FF88)
+                            )
+                        }
+
+                        // Pin toggle
+                        IconButton(onClick = {
+                            haptic.lightTap()
+                            viewModel.togglePinned()
+                        }) {
+                            Icon(
+                                imageVector = if (issue.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                                contentDescription = "Pin",
+                                tint = if (issue.isPinned) AitiaBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Archive toggle
+                        IconButton(onClick = {
+                            haptic.lightTap()
+                            viewModel.toggleArchived()
+                        }) {
+                            Icon(
+                                imageVector = if (issue.isArchived) Icons.Default.Unarchive else Icons.Default.Archive,
+                                contentDescription = "Archive",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Delete
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = extendedColors.priorityCritical
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        haptic.lightTap()
+                        showMagicToolkit = true
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.Black
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Magic Toolkit ✨",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    },
+                    containerColor = Color(0xFF00E5FF),
+                    elevation = FloatingActionButtonDefaults.elevation(8.dp)
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background,
+            modifier = modifier
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(innerPadding)
             ) {
-                when (selectedTabIndex) {
-                    0 -> {
-                        // Overview Tab
-                        // 1. Previous Fix Memory Matcher Banner
-                        if (matchedFixes.isNotEmpty()) {
-                            item {
-                                PreviousFixBanner(
-                                    matchedFix = matchedFixes.first(),
-                                    onApplySolution = { sol ->
-                                        viewModel.updateIssueField { it.copy(solution = sol) }
-                                    },
-                                    onNavigateToIssue = { targetId ->
-                                        viewModel.setIssueId(targetId)
-                                    }
+                // 1. Status Progress Bar
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "STATUS PROGRESS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (issue.isResolved) {
+                                Text(
+                                    text = "🎉 Bug Resolved!",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF00FF88),
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
-
-                        // 2. Root Cause Diagnostician Card
-                        item {
-                            RootCauseDiagnosisCard(
-                                exceptionType = issue.exceptionType,
-                                errorMessage = issue.errorMessage.ifBlank { issue.technicalDetails },
-                                onApplySuggestedFix = { codeSnippet ->
-                                    viewModel.updateIssueField { it.copy(solution = codeSnippet) }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        StatusFlowBar(
+                            currentStatus = issue.status,
+                            onStatusSelected = { newStatus ->
+                                viewModel.updateStatus(newStatus)
+                                if (newStatus == IssueStatus.FIXED || newStatus == IssueStatus.VERIFIED) {
+                                    haptic.success()
+                                    showConfetti = true
+                                    showResolutionPrompt = true
+                                    Toast.makeText(context, "🎉 Bug Squashed! Great job!", Toast.LENGTH_SHORT).show()
                                 }
+                            }
+                        )
+                    }
+                }
+
+                // 2. Title & Tags Header
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth(),
+                    tonalElevation = 1.dp
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TypeBadge(type = issue.type)
+                            PriorityBadge(priority = issue.priority)
+                            StatusBadge(status = issue.status)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = issue.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        // Tags row
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            tags.forEach { tag ->
+                                Surface(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable { viewModel.removeTag(tag.id) },
+                                    color = AitiaBlue.copy(alpha = 0.15f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "#${tag.name}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = AitiaBlue,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove",
+                                            tint = AitiaBlue,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "+ Tag",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { showAddTagDialog = true }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
 
-                        // 3. Hardware & System Vitals Card
-                        item {
-                            DeviceVitalsCard(
-                                onSnapshotCaptured = { snapshot ->
-                                    viewModel.appendDeviceVitals(context)
-                                }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (issue.projectName != null) "Project: ${issue.projectName}" else "No Project",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Created: ${DateFormatter.formatAbsolute(issue.createdAt)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                }
 
-                        // 4. Description
-                        item {
-                            DetailSectionCard(title = "Description") {
-                                OutlinedTextField(
-                                    value = issue.description,
-                                    onValueChange = { newDesc ->
-                                        viewModel.updateIssueField { it.copy(description = newDesc) }
-                                    },
-                                    placeholder = { Text("Add detailed bug description...") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = AitiaBlue,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
+                // 3. Tab Row (3 Streamlined, Clean Tabs)
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = AitiaBlue,
+                    edgePadding = 16.dp
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = {
+                                haptic.lightTap()
+                                selectedTabIndex = index
+                            },
+                            text = {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
-                        }
+                        )
+                    }
+                }
 
-                        // 5. Screen / Feature Area
-                        item {
-                            DetailSectionCard(title = "Screen / Feature Area") {
-                                OutlinedTextField(
-                                    value = issue.screen,
-                                    onValueChange = { newScreen ->
-                                        viewModel.updateIssueField { it.copy(screen = newScreen) }
-                                    },
-                                    placeholder = { Text("e.g. Profile -> Edit Photo") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = AitiaBlue,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                            }
-                        }
+                // 4. Tab Content
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    when (selectedTabIndex) {
+                        0 -> {
+                            // TAB 0: OVERVIEW & FIX
 
-                        // 6. Steps to Reproduce (With Voice Dictation trigger)
-                        item {
-                            DetailSectionCard(
-                                title = "Steps to Reproduce",
-                                headerAction = {
-                                    TextButton(onClick = { showVoiceStepsDialog = true }) {
-                                        Text("🎙️ Dictate Steps", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F0FF))
-                                    }
-                                }
-                            ) {
-                                OutlinedTextField(
-                                    value = issue.stepsToReproduce,
-                                    onValueChange = { newSteps ->
-                                        viewModel.updateIssueField { it.copy(stepsToReproduce = newSteps) }
-                                    },
-                                    placeholder = { Text("1. Open screen\n2. Tap action\n3. Observe problem") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = AitiaBlue,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                            }
-                        }
-
-                        // 7. Expected vs Actual Behavior
-                        item {
-                            DetailSectionCard(title = "Expected vs Actual Behavior") {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    OutlinedTextField(
-                                        value = issue.expectedBehavior,
-                                        onValueChange = { newExp ->
-                                            viewModel.updateIssueField { it.copy(expectedBehavior = newExp) }
+                            // 1. Previous Fix Memory Matcher Banner (if similar issue was resolved before)
+                            if (matchedFixes.isNotEmpty()) {
+                                item {
+                                    PreviousFixBanner(
+                                        matchedFix = matchedFixes.first(),
+                                        onApplySolution = { sol ->
+                                            viewModel.updateIssueField { it.copy(solution = sol) }
                                         },
-                                        label = { Text("Expected Behavior") },
-                                        placeholder = { Text("What should have happened?") },
+                                        onNavigateToIssue = { targetId ->
+                                            viewModel.setIssueId(targetId)
+                                        }
+                                    )
+                                }
+                            }
+
+                            // 2. Smart Fix Advisor (ELI5 Plain English + Developer Code)
+                            item {
+                                RootCauseDiagnosisCard(
+                                    exceptionType = issue.exceptionType,
+                                    errorMessage = issue.errorMessage.ifBlank { issue.technicalDetails },
+                                    onApplySuggestedFix = { codeSnippet ->
+                                        viewModel.updateIssueField { it.copy(solution = codeSnippet) }
+                                    }
+                                )
+                            }
+
+                            // 3. Description
+                            item {
+                                DetailSectionCard(title = "Description") {
+                                    OutlinedTextField(
+                                        value = issue.description,
+                                        onValueChange = { newDesc ->
+                                            viewModel.updateIssueField { it.copy(description = newDesc) }
+                                        },
+                                        placeholder = { Text("What went wrong? Describe what happened...") },
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = AitiaBlue,
@@ -565,553 +559,486 @@ fun IssueDetailScreen(
                                         ),
                                         shape = RoundedCornerShape(8.dp)
                                     )
+                                }
+                            }
 
+                            // 4. Screen / Feature Area
+                            item {
+                                DetailSectionCard(title = "Screen / Feature Area") {
                                     OutlinedTextField(
-                                        value = issue.actualBehavior,
-                                        onValueChange = { newAct ->
-                                            viewModel.updateIssueField { it.copy(actualBehavior = newAct) }
+                                        value = issue.screen,
+                                        onValueChange = { newScreen ->
+                                            viewModel.updateIssueField { it.copy(screen = newScreen) }
                                         },
-                                        label = { Text("Actual Behavior") },
-                                        placeholder = { Text("What actually happened?") },
+                                        placeholder = { Text("e.g. Profile -> Edit Photo") },
                                         modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = extendedColors.priorityCritical,
+                                            focusedBorderColor = AitiaBlue,
                                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                                         ),
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                 }
                             }
-                        }
-                    }
 
-                    1 -> {
-                        // Logs & Diagnostics Tab
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                // Diagnostic Action Chips
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showScanOcrDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00F0FF)),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("📸 Scan Terminal OCR", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                    }
-
-                                    Button(
-                                        onClick = {
-                                            haptic.success()
-                                            viewModel.harvestLogcatToTechnicalDetails()
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("📋 Dump Recent Logcat", color = Color.White, fontSize = 12.sp)
-                                    }
-
-                                    Button(
-                                        onClick = {
-                                            haptic.success()
-                                            viewModel.appendDeviceVitals(context)
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("⚡ Snapshot Vitals", color = Color.White, fontSize = 12.sp)
-                                    }
-
-                                    Button(
-                                        onClick = { showCurlInspectorDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("🌐 cURL / HTTP", color = Color(0xFF00FF88), fontSize = 12.sp)
-                                    }
-                                }
-
-                                CodeViewer(
-                                    codeText = issue.technicalDetails,
-                                    onCodeChange = { newLogs ->
-                                        viewModel.updateIssueField { it.copy(technicalDetails = newLogs) }
-                                    },
-                                    onParseStackTrace = {
-                                        haptic.success()
-                                        viewModel.parseLogsAndAutoPopulate()
-                                    }
-                                )
-
-                                // Parsed diagnostics breakdown
-                                DetailSectionCard(title = "Extracted Diagnostics") {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(modifier = Modifier.fillMaxWidth()) {
-                                            Text(
-                                                text = "Exception: ",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = issue.exceptionType.ifBlank { "Not detected" },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (issue.exceptionType.isNotBlank()) extendedColors.priorityCritical else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        Row(modifier = Modifier.fillMaxWidth()) {
-                                            Text(
-                                                text = "Source File: ",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = if (issue.sourceFile.isNotBlank()) "${issue.sourceFile}:${issue.sourceLine}" else "Not detected",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (issue.sourceFile.isNotBlank()) AitiaBlue else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        Row(modifier = Modifier.fillMaxWidth()) {
-                                            Text(
-                                                text = "Error Message: ",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = issue.errorMessage.ifBlank { "None" },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    2 -> {
-                        // Investigation & Tasks Tab
-                        item {
-                            DetailSectionCard(
-                                title = "Investigation Journal",
-                                headerAction = {
-                                    Row {
+                            // 5. Steps to Reproduce (With Voice Dictation trigger)
+                            item {
+                                DetailSectionCard(
+                                    title = "Steps to Reproduce",
+                                    headerAction = {
                                         TextButton(onClick = { showVoiceStepsDialog = true }) {
-                                            Text("🎙️ Dictate", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F0FF))
-                                        }
-                                        TextButton(onClick = { showAddNoteDialog = true }) {
-                                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("+ Note", style = MaterialTheme.typography.labelSmall)
+                                            Text("🎙️ Speak Steps", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00E5FF), fontWeight = FontWeight.Bold)
                                         }
                                     }
-                                }
-                            ) {
-                                if (notes.isEmpty()) {
-                                    Text(
-                                        text = "No debugging notes added yet. Record observations as you investigate.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        notes.forEach { note ->
-                                            Surface(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(10.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.Top
-                                                ) {
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Text(
-                                                            text = DateFormatter.formatAbsolute(note.createdAt),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = AitiaBlue,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                        Spacer(modifier = Modifier.height(2.dp))
-                                                        Text(
-                                                            text = note.text,
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                    }
-                                                    IconButton(
-                                                        onClick = {
-                                                            haptic.lightTap()
-                                                            viewModel.deleteNote(note)
-                                                        },
-                                                        modifier = Modifier.size(24.dp)
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Delete,
-                                                            contentDescription = "Delete",
-                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                            modifier = Modifier.size(14.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        item {
-                            DetailSectionCard(title = "Debug Checklist & Tasks") {
-                                ChecklistComponent(
-                                    items = checklist,
-                                    onToggleItem = { item, isComp -> viewModel.toggleChecklistItem(item, isComp) },
-                                    onAddItem = { text -> viewModel.addChecklistItem(text) },
-                                    onDeleteItem = { item -> viewModel.deleteChecklistItem(item) }
-                                )
-                            }
-                        }
-                    }
-
-                    3 -> {
-                        // Root Cause & Fix (Αἰτία) Tab
-                        item {
-                            DetailSectionCard(title = "Suspected Cause — Root Cause (Αἰτία)") {
-                                OutlinedTextField(
-                                    value = issue.suspectedCause,
-                                    onValueChange = { newCause ->
-                                        viewModel.updateIssueField { it.copy(suspectedCause = newCause) }
-                                    },
-                                    placeholder = { Text("Why did this issue happen? (e.g. Permission callback unhandled)") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = AitiaPurple,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                            }
-                        }
-
-                        item {
-                            DetailSectionCard(
-                                title = "Fix / Solution",
-                                headerAction = {
-                                    TextButton(onClick = { showGitCommitDialog = true }) {
-                                        Text("🌿 Git Commit Msg", style = MaterialTheme.typography.labelSmall, color = Color(0xFF58A6FF))
-                                    }
-                                }
-                            ) {
-                                OutlinedTextField(
-                                    value = issue.solution,
-                                    onValueChange = { newFix ->
-                                        viewModel.updateIssueField { it.copy(solution = newFix) }
-                                    },
-                                    placeholder = { Text("What changes were made to fix the defect?") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = extendedColors.statusFixed,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                            }
-                        }
-
-                        item {
-                            DetailSectionCard(title = "Verification Notes") {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                ) {
                                     OutlinedTextField(
-                                        value = issue.verification,
-                                        onValueChange = { newVer ->
-                                            viewModel.updateIssueField { it.copy(verification = newVer) }
+                                        value = issue.stepsToReproduce,
+                                        onValueChange = { newSteps ->
+                                            viewModel.updateIssueField { it.copy(stepsToReproduce = newSteps) }
                                         },
-                                        placeholder = { Text("Retested on Pixel 8 / Android 15. Crash no longer reproduces.") },
+                                        placeholder = { Text("1. Open screen\n2. Tap action\n3. Observe problem") },
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = extendedColors.statusVerified,
+                                            focusedBorderColor = AitiaBlue,
                                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                                         ),
                                         shape = RoundedCornerShape(8.dp)
                                     )
+                                }
+                            }
 
-                                    if (issue.status != IssueStatus.VERIFIED) {
+                            // 6. Interactive Task Checklist
+                            item {
+                                DetailSectionCard(title = "Investigation Checklist") {
+                                    ChecklistComponent(
+                                        items = checklist,
+                                        onAddItem = { text -> viewModel.addChecklistItem(text) },
+                                        onToggleItem = { item, isCompleted -> viewModel.toggleChecklistItem(item, isCompleted) },
+                                        onDeleteItem = { item -> viewModel.deleteChecklistItem(item) }
+                                    )
+                                }
+                            }
+
+                            // 7. Fix, Root Cause & Solution
+                            item {
+                                DetailSectionCard(
+                                    title = "Root Cause & Fix (Αἰτία)",
+                                    headerAction = {
+                                        TextButton(onClick = { showGitCommitDialog = true }) {
+                                            Text("🌿 Git Commit Msg", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00FF88), fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        OutlinedTextField(
+                                            value = issue.suspectedCause,
+                                            onValueChange = { newCause ->
+                                                viewModel.updateIssueField { it.copy(suspectedCause = newCause) }
+                                            },
+                                            label = { Text("Why did it happen?") },
+                                            placeholder = { Text("Root cause explanation...") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = AitiaPurple,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+
+                                        OutlinedTextField(
+                                            value = issue.solution,
+                                            onValueChange = { newSol ->
+                                                viewModel.updateIssueField { it.copy(solution = newSol) }
+                                            },
+                                            label = { Text("How was it fixed?") },
+                                            placeholder = { Text("Code change details or pattern...") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = StatusFixed,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+
+                                        OutlinedTextField(
+                                            value = issue.verification,
+                                            onValueChange = { newVer ->
+                                                viewModel.updateIssueField { it.copy(verification = newVer) }
+                                            },
+                                            label = { Text("Verification Notes") },
+                                            placeholder = { Text("Tested on Pixel 8 (Android 15), verified fix...") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = StatusFixed,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                                            ),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        1 -> {
+                            // TAB 1: DIAGNOSTICS & SPECS
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    // Fast Diagnostic Action Bar
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = { showScanOcrDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("📸 Scan Screen OCR", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        }
+
                                         Button(
                                             onClick = {
                                                 haptic.success()
-                                                viewModel.updateStatus(IssueStatus.VERIFIED)
+                                                viewModel.harvestLogcatToTechnicalDetails()
+                                                Toast.makeText(context, "Recent crash logs captured!", Toast.LENGTH_SHORT).show()
                                             },
-                                            colors = ButtonDefaults.buttonColors(containerColor = extendedColors.statusVerified),
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier.fillMaxWidth()
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                            shape = RoundedCornerShape(8.dp)
                                         ) {
-                                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Mark as Verified", fontWeight = FontWeight.Bold)
+                                            Text("📋 Grab Crash Logs", color = Color.White, fontSize = 12.sp)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                haptic.success()
+                                                viewModel.appendDeviceVitals(context)
+                                                Toast.makeText(context, "Hardware specs attached!", Toast.LENGTH_SHORT).show()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("⚡ Snapshot Specs", color = Color.White, fontSize = 12.sp)
+                                        }
+
+                                        Button(
+                                            onClick = { showCurlInspectorDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("🌐 cURL / Network", color = Color(0xFF00FF88), fontSize = 12.sp)
                                         }
                                     }
+
+                                    // Extracted Diagnostics Card
+                                    DetailSectionCard(title = "Detected Error Diagnostics") {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Row(modifier = Modifier.fillMaxWidth()) {
+                                                Text(
+                                                    text = "Exception: ",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = issue.exceptionType.ifBlank { "None detected" },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (issue.exceptionType.isNotBlank()) extendedColors.priorityCritical else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            Row(modifier = Modifier.fillMaxWidth()) {
+                                                Text(
+                                                    text = "Source File: ",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = if (issue.sourceFile.isNotBlank()) "${issue.sourceFile}:${issue.sourceLine}" else "None detected",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (issue.sourceFile.isNotBlank()) AitiaBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            Row(modifier = Modifier.fillMaxWidth()) {
+                                                Text(
+                                                    text = "Error Message: ",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = issue.errorMessage.ifBlank { "None" },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // StackTrace & Raw Logs CodeViewer
+                                    CodeViewer(
+                                        codeText = issue.technicalDetails,
+                                        onCodeChange = { newLogs ->
+                                            viewModel.updateIssueField { it.copy(technicalDetails = newLogs) }
+                                        },
+                                        onParseStackTrace = {
+                                            haptic.success()
+                                            viewModel.parseLogsAndAutoPopulate()
+                                            Toast.makeText(context, "Stack trace parsed!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+
+                                    // Live Hardware & System Vitals Card
+                                    DeviceVitalsCard(
+                                        onSnapshotCaptured = { snapshot ->
+                                            viewModel.appendDeviceVitals(context)
+                                            Toast.makeText(context, "Device specs saved to issue", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+
+                                    // Multi-Device QA Verification Matrix
+                                    CrossDeviceVerificationMatrix(
+                                        onMatrixUpdated = { updatedList ->
+                                            val summary = updatedList.joinToString("\n") { "${it.deviceName} (${it.osVersion}): ${it.status.label}" }
+                                            viewModel.updateIssueField { it.copy(verification = summary) }
+                                        }
+                                    )
                                 }
                             }
                         }
 
-                        // Cross-Device Verification Matrix
-                        item {
-                            CrossDeviceVerificationMatrix()
-                        }
-                    }
+                        2 -> {
+                            // TAB 2: ACTIVITY & NOTES
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    // Quick Attachment Action Row
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = { showCameraCaptureDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("📸 Snap & Draw", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        }
 
-                    4 -> {
-                        // History & Relations Tab
-                        // Attachments Section
-                        item {
-                            DetailSectionCard(
-                                title = "Attachments & Evidence",
-                                headerAction = {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        TextButton(onClick = { showCameraCaptureDialog = true }) {
-                                            Text("📸 Camera", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00FF88))
+                                        Button(
+                                            onClick = { showAudioRecorderDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF70A6)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("🎙️ Audio Memo", color = Color.White, fontSize = 12.sp)
                                         }
-                                        TextButton(onClick = { showAudioRecorderDialog = true }) {
-                                            Text("🎙️ Audio", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00F0FF))
+
+                                        Button(
+                                            onClick = {
+                                                val existingImage = attachments.firstOrNull { it.isImage }
+                                                if (existingImage != null) {
+                                                    regressionActualImageFile = File(existingImage.uriPath.removePrefix("file://"))
+                                                }
+                                                showVisualRegressionDialog = true
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("🔀 Compare Design", color = Color(0xFFFFB703), fontSize = 12.sp)
                                         }
-                                        TextButton(onClick = {
-                                            photoPickerLauncher.launch(
-                                                androidx.activity.result.PickVisualMediaRequest(
-                                                    ActivityResultContracts.PickVisualMedia.ImageAndVideo
+
+                                        Button(
+                                            onClick = { showBarcodeScannerDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("🏷️ Scan Tag", color = Color.White, fontSize = 12.sp)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                photoPickerLauncher.launch(
+                                                    androidx.activity.result.PickVisualMediaRequest(
+                                                        ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                                                    )
                                                 )
-                                            )
-                                        }) {
-                                            Icon(imageVector = Icons.Default.Image, contentDescription = null, modifier = Modifier.size(14.dp))
-                                            Spacer(modifier = Modifier.width(2.dp))
-                                            Text("+ Photo", style = MaterialTheme.typography.labelSmall)
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("📁 Add File", color = Color.White, fontSize = 12.sp)
                                         }
                                     }
-                                }
-                            ) {
-                                // Action Chips
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                        .padding(bottom = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Button(
-                                        onClick = { showBarcodeScannerDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                                        shape = RoundedCornerShape(6.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+
+                                    // Attachments Section
+                                    DetailSectionCard(
+                                        title = "Media & Attachments (${attachments.size})",
+                                        headerAction = {
+                                            TextButton(onClick = { showCameraCaptureDialog = true }) {
+                                                Text("+ Snap Photo", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00E5FF))
+                                            }
+                                        }
                                     ) {
-                                        Text("🏷️ Scan Tag", fontSize = 11.sp, color = Color.White)
-                                    }
+                                        if (attachments.isEmpty()) {
+                                            Text(
+                                                text = "No photos, audio recordings, or videos attached yet.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                attachments.forEach { attachment ->
+                                                    Surface(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .clickable { viewingAttachment = attachment },
+                                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(10.dp),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.weight(1f)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = when {
+                                                                        attachment.isImage -> Icons.Default.CameraAlt
+                                                                        attachment.isVideo -> Icons.Default.CameraAlt
+                                                                        attachment.isAudio -> Icons.Default.Mic
+                                                                        else -> Icons.Default.Folder
+                                                                    },
+                                                                    contentDescription = null,
+                                                                    tint = AitiaBlue,
+                                                                    modifier = Modifier.size(20.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(10.dp))
+                                                                Column {
+                                                                    Text(
+                                                                        text = attachment.filename,
+                                                                        style = MaterialTheme.typography.bodyMedium,
+                                                                        fontWeight = FontWeight.Medium,
+                                                                        maxLines = 1
+                                                                    )
+                                                                    Text(
+                                                                        text = "${attachment.formattedSize} • ${DateFormatter.formatAbsolute(attachment.createdAt)}",
+                                                                        style = MaterialTheme.typography.labelSmall,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                    )
+                                                                }
+                                                            }
 
-                                    Button(
-                                        onClick = { showBugCardShareDialog = true },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                                        shape = RoundedCornerShape(6.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text("🎟️ Export Card", fontSize = 11.sp, color = Color(0xFF00FF88))
-                                    }
-
-                                    Button(
-                                        onClick = { filePickerLauncher.launch("*/*") },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                                        shape = RoundedCornerShape(6.dp),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text("+ File", fontSize = 11.sp, color = Color.White)
-                                    }
-                                }
-
-                                if (attachments.isEmpty()) {
-                                    Text(
-                                        text = "No screenshots, videos, or logs attached yet. Use in-app camera or file picker.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        attachments.forEach { att ->
-                                            Surface(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .clickable { viewingAttachment = att },
-                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(10.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(
-                                                            imageVector = if (att.isImage) Icons.Default.Image else Icons.Default.AttachFile,
-                                                            contentDescription = null,
-                                                            tint = AitiaBlue,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Column {
-                                                            Text(
-                                                                text = att.filename,
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurface,
-                                                                fontWeight = FontWeight.Medium
-                                                            )
-                                                            Text(
-                                                                text = "${att.mimeType} · ${DateFormatter.formatRelativeTime(att.createdAt)}",
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
-                                                    }
-
-                                                    Row {
-                                                        if (att.isImage) {
-                                                            TextButton(onClick = {
-                                                                val file = File(att.uriPath.removePrefix("file://"))
-                                                                regressionActualImageFile = file
-                                                                showVisualRegressionDialog = true
-                                                            }) {
-                                                                Text("🔀 Compare", fontSize = 11.sp, color = Color(0xFF00F0FF))
+                                                            IconButton(
+                                                                onClick = { viewModel.deleteAttachment(attachment) },
+                                                                modifier = Modifier.size(28.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Close,
+                                                                    contentDescription = "Delete",
+                                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
                                                             }
                                                         }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
 
-                                                        IconButton(
-                                                            onClick = {
-                                                                haptic.lightTap()
-                                                                viewModel.deleteAttachment(att)
-                                                            },
-                                                            modifier = Modifier.size(24.dp)
+                                    // Debugging Notes Journal
+                                    DetailSectionCard(
+                                        title = "Investigation Journal (${notes.size})",
+                                        headerAction = {
+                                            Row {
+                                                TextButton(onClick = { showVoiceStepsDialog = true }) {
+                                                    Text("🎙️ Dictate", style = MaterialTheme.typography.labelSmall, color = Color(0xFF00E5FF))
+                                                }
+                                                TextButton(onClick = { showAddNoteDialog = true }) {
+                                                    Text("+ Note", style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        if (notes.isEmpty()) {
+                                            Text(
+                                                text = "No debugging notes added yet. Record observations as you investigate.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                notes.forEach { note ->
+                                                    Surface(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(10.dp),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.Top
                                                         ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Delete,
-                                                                contentDescription = "Delete",
-                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                                modifier = Modifier.size(14.dp)
-                                                            )
+                                                            Column(modifier = Modifier.weight(1f)) {
+                                                                Text(
+                                                                    text = DateFormatter.formatAbsolute(note.createdAt),
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = AitiaBlue,
+                                                                    fontWeight = FontWeight.Bold
+                                                                )
+                                                                Spacer(modifier = Modifier.height(2.dp))
+                                                                Text(
+                                                                    text = note.text,
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                    color = MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                            }
+                                                            IconButton(
+                                                                onClick = {
+                                                                    haptic.lightTap()
+                                                                    viewModel.deleteNote(note)
+                                                                },
+                                                                modifier = Modifier.size(24.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Close,
+                                                                    contentDescription = "Delete",
+                                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.size(14.dp)
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
 
-                        // Related Issues Section
-                        item {
-                            DetailSectionCard(
-                                title = "Related Issues",
-                                headerAction = {
-                                    TextButton(onClick = { showAddRelationDialog = true }) {
-                                        Icon(imageVector = Icons.Default.Link, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("+ Link", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                            ) {
-                                if (relatedIssues.isEmpty()) {
-                                    Text(
-                                        text = "No related issues linked.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        relatedIssues.forEach { rel ->
-                                            Surface(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(10.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Column {
-                                                        Text(
-                                                            text = rel.relationshipType.displayName,
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = AitiaBlue,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                        Text(
-                                                            text = "#${rel.targetIssueId} — ${rel.targetTitle}",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Audit Timeline
-                        item {
-                            DetailSectionCard(title = "Audit Timeline") {
-                                if (timeline.isEmpty()) {
-                                    Text(
-                                        text = "No timeline events recorded yet.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        timeline.forEach { event ->
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.Top
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(8.dp)
-                                                        .clip(CircleShape)
-                                                        .background(AitiaBlue)
-                                                        .padding(top = 4.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Text(
-                                                            text = event.title,
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = FontWeight.SemiBold,
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                        Spacer(modifier = Modifier.width(6.dp))
-                                                        Text(
-                                                            text = "· ${DateFormatter.formatRelativeTime(event.timestamp)}",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
-                                                    if (event.description.isNotBlank()) {
-                                                        Text(
-                                                            text = event.description,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
+                                    // Timeline Events
+                                    DetailSectionCard(title = "Change History (${timeline.size})") {
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            timeline.forEach { event ->
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(6.dp)
+                                                            .clip(CircleShape)
+                                                            .background(AitiaBlue)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = "${event.description} • ${DateFormatter.formatAbsolute(event.timestamp)}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
                                                 }
                                             }
                                         }
@@ -1120,402 +1047,295 @@ fun IssueDetailScreen(
                             }
                         }
                     }
-                }
 
-                item {
-                    Spacer(modifier = Modifier.height(32.dp))
+                    item {
+                        Spacer(modifier = Modifier.height(60.dp))
+                    }
                 }
             }
         }
 
-        // 1. In-App Camera with Live Bug Markup Dialog
-        if (showCameraCaptureDialog) {
-            AitiaCameraCaptureDialog(
-                onDismiss = { showCameraCaptureDialog = false },
-                onImageCaptured = { capturedFile ->
-                    viewModel.addAttachment(
-                        filename = capturedFile.name,
-                        uriPath = capturedFile.absolutePath,
-                        mimeType = "image/png",
-                        sizeBytes = capturedFile.length()
-                    )
-                }
-            )
-        }
+        // Celebratory Confetti Animation when Bug is Squashed!
+        ConfettiEffect(
+            trigger = showConfetti,
+            onAnimationEnd = { showConfetti = false }
+        )
+    }
 
-        // 2. Scan-to-StackTrace OCR Dialog
-        if (showScanOcrDialog) {
-            ScanStackTraceDialog(
-                onDismiss = { showScanOcrDialog = false },
-                onApplyParsedStackTrace = { parsed, raw ->
-                    viewModel.updateIssueField { current ->
-                        current.copy(
-                            exceptionType = parsed.exceptionType ?: current.exceptionType,
-                            errorMessage = parsed.errorMessage ?: current.errorMessage,
-                            sourceFile = parsed.sourceFile ?: current.sourceFile,
-                            sourceLine = parsed.sourceLine ?: current.sourceLine,
-                            technicalDetails = if (current.technicalDetails.isBlank()) raw else "${current.technicalDetails}\n\n// --- Scanned Terminal Logs ---\n$raw"
+    // Modal Superpower Dialogs
+    if (showMagicToolkit) {
+        MagicToolkitBottomSheet(
+            onDismiss = { showMagicToolkit = false },
+            onLaunchCameraMarkup = { showCameraCaptureDialog = true },
+            onLaunchOcrScan = { showScanOcrDialog = true },
+            onLaunchVoiceSteps = { showVoiceStepsDialog = true },
+            onLaunchAudioGlitch = { showAudioRecorderDialog = true },
+            onLaunchVisualCompare = {
+                val existingImage = attachments.firstOrNull { it.isImage }
+                if (existingImage != null) {
+                    regressionActualImageFile = File(existingImage.uriPath.removePrefix("file://"))
+                }
+                showVisualRegressionDialog = true
+            },
+            onSnapshotVitals = {
+                viewModel.appendDeviceVitals(context)
+                Toast.makeText(context, "Hardware specs attached!", Toast.LENGTH_SHORT).show()
+            },
+            onDumpLogcat = {
+                viewModel.harvestLogcatToTechnicalDetails()
+                Toast.makeText(context, "Recent crash logs captured!", Toast.LENGTH_SHORT).show()
+            },
+            onLaunchCurlInspector = { showCurlInspectorDialog = true },
+            onLaunchShareBugCard = { showBugCardShareDialog = true },
+            onLaunchBarcodeScanner = { showBarcodeScannerDialog = true }
+        )
+    }
+
+    if (showTourDialog) {
+        FeatureTourDialog(onDismiss = { showTourDialog = false })
+    }
+
+    if (showCameraCaptureDialog) {
+        AitiaCameraCaptureDialog(
+            onDismiss = { showCameraCaptureDialog = false },
+            onImageCaptured = { savedFile ->
+                showCameraCaptureDialog = false
+                viewModel.addAttachment(
+                    filename = savedFile.name,
+                    uriPath = Uri.fromFile(savedFile).toString(),
+                    mimeType = "image/png",
+                    sizeBytes = savedFile.length()
+                )
+                Toast.makeText(context, "Annotated image saved!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showScanOcrDialog) {
+        ScanStackTraceDialog(
+            onDismiss = { showScanOcrDialog = false },
+            onApplyParsedStackTrace = { parsedResult, fullRawText ->
+                showScanOcrDialog = false
+                val current = viewModel.uiState.value.issue
+                if (current != null) {
+                    viewModel.updateIssueField {
+                        it.copy(
+                            technicalDetails = if (it.technicalDetails.isBlank()) fullRawText else "${it.technicalDetails}\n\n$fullRawText",
+                            exceptionType = parsedResult.exceptionType ?: it.exceptionType,
+                            errorMessage = parsedResult.errorMessage ?: it.errorMessage,
+                            sourceFile = parsedResult.sourceFile ?: it.sourceFile,
+                            sourceLine = parsedResult.sourceLine ?: it.sourceLine
                         )
                     }
                 }
-            )
-        }
+                Toast.makeText(context, "Error parsed and populated!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 
-        // 3. Visual Regression Compare Dialog
-        if (showVisualRegressionDialog && regressionActualImageFile != null) {
+    if (showVisualRegressionDialog) {
+        val imageFile = regressionActualImageFile
+        if (imageFile != null && imageFile.exists()) {
             VisualRegressionCompareDialog(
-                actualImageFile = regressionActualImageFile!!,
+                actualImageFile = imageFile,
                 onDismiss = { showVisualRegressionDialog = false }
             )
+        } else {
+            Toast.makeText(context, "Please attach or take a bug screenshot first to compare against design.", Toast.LENGTH_LONG).show()
+            showVisualRegressionDialog = false
         }
+    }
 
-        // 5. Voice Speech-to-Steps Dialog
-        if (showVoiceStepsDialog) {
-            VoiceReproStepsDialog(
-                initialText = issue.stepsToReproduce,
-                onDismiss = { showVoiceStepsDialog = false },
-                onApplySteps = { steps ->
-                    viewModel.updateIssueField { it.copy(stepsToReproduce = steps) }
+    if (showVoiceStepsDialog) {
+        VoiceReproStepsDialog(
+            onDismiss = { showVoiceStepsDialog = false },
+            onApplySteps = { formattedSteps ->
+                showVoiceStepsDialog = false
+                viewModel.updateIssueField { current ->
+                    val combined = if (current.stepsToReproduce.isBlank()) formattedSteps else "${current.stepsToReproduce}\n$formattedSteps"
+                    current.copy(stepsToReproduce = combined)
                 }
-            )
-        }
+                Toast.makeText(context, "Voice steps appended!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 
-        // 6. Audio Glitch Recorder Dialog
-        if (showAudioRecorderDialog) {
-            AudioGlitchRecorderDialog(
-                onDismiss = { showAudioRecorderDialog = false },
-                onAudioRecorded = { audioFile ->
-                    viewModel.addAttachment(
-                        filename = audioFile.name,
-                        uriPath = audioFile.absolutePath,
-                        mimeType = "audio/mp4",
-                        sizeBytes = audioFile.length()
+    if (showAudioRecorderDialog) {
+        AudioGlitchRecorderDialog(
+            onDismiss = { showAudioRecorderDialog = false },
+            onAudioRecorded = { audioFile ->
+                showAudioRecorderDialog = false
+                viewModel.addAttachment(
+                    filename = audioFile.name,
+                    uriPath = Uri.fromFile(audioFile).toString(),
+                    mimeType = "audio/mp4",
+                    sizeBytes = audioFile.length()
+                )
+                Toast.makeText(context, "Audio memo saved!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showCurlInspectorDialog) {
+        NetworkCurlInspectorDialog(
+            onDismiss = { showCurlInspectorDialog = false },
+            onAttachToIssue = { curlCmd, formattedJson ->
+                showCurlInspectorDialog = false
+                viewModel.updateIssueField { current ->
+                    val payload = "\n\n### Network cURL Command\n```bash\n$curlCmd\n```\n\n```json\n$formattedJson\n```"
+                    current.copy(technicalDetails = current.technicalDetails + payload)
+                }
+                Toast.makeText(context, "cURL payload attached!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showGitCommitDialog) {
+        GitCommitDialog(
+            issue = issue,
+            onDismiss = { showGitCommitDialog = false }
+        )
+    }
+
+    if (showBarcodeScannerDialog) {
+        BarcodeScannerDialog(
+            onDismiss = { showBarcodeScannerDialog = false },
+            onBarcodeScanned = { rawBarcode ->
+                showBarcodeScannerDialog = false
+                viewModel.addTag("asset:$rawBarcode")
+                Toast.makeText(context, "Asset tag linked: $rawBarcode", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showBugCardShareDialog) {
+        BugCardShareDialog(
+            issue = issue,
+            onDismiss = { showBugCardShareDialog = false }
+        )
+    }
+
+    // Add Note Dialog
+    if (showAddNoteDialog) {
+        var noteInput by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddNoteDialog = false },
+            title = { Text("Add Debugging Note") },
+            text = {
+                OutlinedTextField(
+                    value = noteInput,
+                    onValueChange = { noteInput = it },
+                    placeholder = { Text("e.g. 10:32 — Confirmed crash only occurs on Android 15.") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 4
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (noteInput.isNotBlank()) {
+                            viewModel.addNote(noteInput)
+                            showAddNoteDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AitiaBlue)
+                ) {
+                    Text("Add Note")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddNoteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Add Tag Dialog
+    if (showAddTagDialog) {
+        var tagInput by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddTagDialog = false },
+            title = { Text("Add Tag") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = tagInput,
+                        onValueChange = { tagInput = it },
+                        placeholder = { Text("e.g. ui, network, auth") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
-                }
-            )
-        }
-
-        // 9. cURL / Network Inspector Dialog
-        if (showCurlInspectorDialog) {
-            NetworkCurlInspectorDialog(
-                onDismiss = { showCurlInspectorDialog = false },
-                onAttachToIssue = { curl, formattedJson ->
-                    val payload = "// --- cURL Command ---\n$curl\n\n// --- Formatted JSON ---\n$formattedJson"
-                    val currentTech = issue.technicalDetails
-                    val newTech = if (currentTech.isBlank()) payload else "$currentTech\n\n$payload"
-                    viewModel.updateIssueField { it.copy(technicalDetails = newTech) }
-                }
-            )
-        }
-
-        // 12. Git Commit Dialog
-        if (showGitCommitDialog) {
-            GitCommitDialog(
-                issue = issue,
-                onDismiss = { showGitCommitDialog = false }
-            )
-        }
-
-        // 14. Barcode / Asset Tag Scanner Dialog
-        if (showBarcodeScannerDialog) {
-            BarcodeScannerDialog(
-                onDismiss = { showBarcodeScannerDialog = false },
-                onBarcodeScanned = { scanned ->
-                    viewModel.addTag("asset:$scanned")
-                }
-            )
-        }
-
-        // 17. Bug Card Share Dialog
-        if (showBugCardShareDialog) {
-            BugCardShareDialog(
-                issue = issue,
-                onDismiss = { showBugCardShareDialog = false }
-            )
-        }
-
-        // Add Tag Dialog with autocomplete
-        if (showAddTagDialog) {
-            var tagInput by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { showAddTagDialog = false },
-                title = { Text("Add Tag") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = tagInput,
-                            onValueChange = { tagInput = it },
-                            placeholder = { Text("e.g. camera, android-15, login") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        if (allTags.isNotEmpty()) {
-                            Text("Existing Tags:", style = MaterialTheme.typography.labelSmall)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                allTags.take(8).forEach { t ->
-                                    FilterChip(
-                                        selected = false,
-                                        onClick = { tagInput = t.name },
-                                        label = { Text("#${t.name}", style = MaterialTheme.typography.labelSmall) }
+                    if (allTags.isNotEmpty()) {
+                        Text("Existing tags:", style = MaterialTheme.typography.labelSmall)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            allTags.take(8).forEach { tag ->
+                                Surface(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable {
+                                            viewModel.addTag(tag.name)
+                                            showAddTagDialog = false
+                                        },
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        text = "#${tag.name}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
                         }
                     }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (tagInput.isNotBlank()) {
-                                viewModel.addTag(tagInput)
-                                showAddTagDialog = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AitiaBlue)
-                    ) {
-                        Text("Add")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddTagDialog = false }) {
-                        Text("Cancel")
-                    }
                 }
-            )
-        }
-
-        // Resolution Workflow prompt
-        if (showResolutionPrompt) {
-            var fixNotes by remember { mutableStateOf(issue.solution) }
-            var verifyNotes by remember { mutableStateOf(issue.verification) }
-            AlertDialog(
-                onDismissRequest = { showResolutionPrompt = false },
-                title = { Text("Record Resolution Details") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = "Preserve what changed and how it was verified for future reference.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        OutlinedTextField(
-                            value = fixNotes,
-                            onValueChange = { fixNotes = it },
-                            label = { Text("Fix Summary") },
-                            placeholder = { Text("What code/config changed?") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = verifyNotes,
-                            onValueChange = { verifyNotes = it },
-                            label = { Text("Verification Notes") },
-                            placeholder = { Text("Tested on Pixel 8 / Android 15. Verified fixed.") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.updateIssueField { it.copy(solution = fixNotes, verification = verifyNotes) }
-                            showResolutionPrompt = false
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = extendedColors.statusFixed)
-                    ) {
-                        Text("Save Resolution")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResolutionPrompt = false }) {
-                        Text("Later")
-                    }
-                }
-            )
-        }
-
-        // Attachment Viewer Dialog
-        if (viewingAttachment != null) {
-            val att = viewingAttachment!!
-            Dialog(onDismissRequest = { viewingAttachment = null }) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp)),
-                    color = MaterialTheme.colorScheme.surface
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (tagInput.isNotBlank()) {
+                            viewModel.addTag(tagInput.trim().removePrefix("#"))
+                            showAddTagDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AitiaBlue)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = att.filename,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            IconButton(onClick = { viewingAttachment = null }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (att.isImage) Icons.Default.Image else Icons.Default.AttachFile,
-                                contentDescription = null,
-                                tint = AitiaBlue,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "URI: ${att.uriPath}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddTagDialog = false }) {
+                    Text("Cancel")
                 }
             }
-        }
+        )
+    }
 
-        // Add Note Dialog
-        if (showAddNoteDialog) {
-            var noteInput by remember { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = { showAddNoteDialog = false },
-                title = { Text("Add Investigation Note") },
-                text = {
-                    OutlinedTextField(
-                        value = noteInput,
-                        onValueChange = { noteInput = it },
-                        placeholder = { Text("e.g. 10:32 — Confirmed crash only occurs on Android 15.") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 4
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (noteInput.isNotBlank()) {
-                                viewModel.addNote(noteInput)
-                                showAddNoteDialog = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AitiaBlue)
-                    ) {
-                        Text("Add Note")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddNoteDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        // Add Relation Dialog
-        if (showAddRelationDialog) {
-            var selectedTargetId by remember { mutableStateOf<Long?>(null) }
-            var selectedRelType by remember { mutableStateOf(RelationshipType.RELATED_TO) }
-
-            AlertDialog(
-                onDismissRequest = { showAddRelationDialog = false },
-                title = { Text("Link Related Issue") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Relationship Type", style = MaterialTheme.typography.labelSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            RelationshipType.entries.take(3).forEach { rel ->
-                                FilterChip(
-                                    selected = selectedRelType == rel,
-                                    onClick = { selectedRelType = rel },
-                                    label = { Text(rel.displayName, style = MaterialTheme.typography.labelSmall) }
-                                )
-                            }
+    // Delete Confirmation Dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Issue #${issue.id}?") },
+            text = { Text("Are you sure you want to permanently delete this issue and all attached notes and logs? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteIssue {
+                            showDeleteDialog = false
+                            onNavigateBack()
                         }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Select Target Issue", style = MaterialTheme.typography.labelSmall)
-                        uiState.allIssues.take(5).forEach { candidate ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(
-                                        if (selectedTargetId == candidate.id) AitiaBlue.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                    .clickable { selectedTargetId = candidate.id }
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "#${candidate.id} — ${candidate.title}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (selectedTargetId != null) {
-                                viewModel.linkRelatedIssue(selectedTargetId!!, selectedRelType)
-                                showAddRelationDialog = false
-                            }
-                        },
-                        enabled = selectedTargetId != null,
-                        colors = ButtonDefaults.buttonColors(containerColor = AitiaBlue)
-                    ) {
-                        Text("Link")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddRelationDialog = false }) {
-                        Text("Cancel")
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = extendedColors.priorityCritical)
+                ) {
+                    Text("Delete Permanently")
                 }
-            )
-        }
-
-        // Delete Confirmation Dialog
-        if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Delete Issue #${issue.id}?") },
-                text = { Text("Are you sure you want to permanently delete this issue and all attached notes and logs? This action cannot be undone.") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.deleteIssue {
-                                showDeleteDialog = false
-                                onNavigateBack()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = extendedColors.priorityCritical)
-                    ) {
-                        Text("Delete Permanently")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Cancel")
-                    }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
                 }
-            )
-        }
+            }
+        )
     }
 }
 

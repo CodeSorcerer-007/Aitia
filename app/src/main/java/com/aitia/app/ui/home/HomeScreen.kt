@@ -20,22 +20,31 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -44,6 +53,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +70,7 @@ import com.aitia.app.domain.model.IssueType
 import com.aitia.app.ui.components.ActiveSessionBanner
 import com.aitia.app.ui.components.AitiaTopAppBar
 import com.aitia.app.ui.components.EmptyStateView
+import com.aitia.app.ui.components.FeatureTourDialog
 import com.aitia.app.ui.components.IssueCard
 import com.aitia.app.ui.components.MetricCard
 import com.aitia.app.ui.theme.AitiaBlue
@@ -78,14 +91,27 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val extendedColors = LocalExtendedColors.current
     val haptic = rememberHapticFeedback()
+    var showTourDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             AitiaTopAppBar(
                 title = "Aitia",
-                subtitle = "Capture. Investigate. Resolve.",
+                subtitle = "Capture • Investigate • Resolve",
                 activeSession = uiState.activeSession,
-                onSettingsClick = onNavigateToSettings
+                onSettingsClick = onNavigateToSettings,
+                actions = {
+                    IconButton(onClick = {
+                        haptic.lightTap()
+                        showTourDialog = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.HelpOutline,
+                            contentDescription = "How to Use",
+                            tint = Color(0xFF00E5FF)
+                        )
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -109,11 +135,70 @@ fun HomeScreen(
                 }
             }
 
-            // 2. Quick Action Shortcuts (+ Bug, + Crash, + Error, + Note)
+            // 2. Interactive Feature Tour / "How It Works" Banner
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                        .clickable {
+                            haptic.lightTap()
+                            showTourDialog = true
+                        },
+                    color = Color(0xFF0D1C24)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF00E5FF).copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color(0xFF00E5FF),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "💡 How to Use Aitia Features",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "1-Min Guide: OCR scan, drawing, voice & sensors",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF8B949E)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Explore →",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF00E5FF)
+                        )
+                    }
+                }
+            }
+
+            // 3. Quick Action Shortcuts (+ Bug, + Crash, + Error, + Note)
             item {
                 Column {
                     Text(
-                        text = "QUICK CAPTURE SHORTCUTS",
+                        text = "START QUICK CAPTURE",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold
@@ -153,11 +238,94 @@ fun HomeScreen(
                 }
             }
 
-            // 3. At-a-Glance Metrics
+            // 4. Bug Slayer Productivity & Rank Card (Love Feature!)
+            val fixedCount = uiState.analyticsSummary.fixedIssues + uiState.analyticsSummary.verifiedIssues
+            val slayerRank = when {
+                fixedCount >= 15 -> "Αἰτία Grandmaster 👑"
+                fixedCount >= 8 -> "Bug Exterminator ⚔️"
+                fixedCount >= 3 -> "Bug Hunter 🏹"
+                else -> "Junior Bug Scout 🐛"
+            }
+
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, Color(0xFF00FF88).copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                    color = Color(0xFF0F1A15)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF00FF88))
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "YOUR SQUASH STATS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF00FF88)
+                                )
+                            }
+
+                            Text(
+                                text = "100% Offline & Private 🛡️",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF8B949E),
+                                fontSize = 10.sp
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = slayerRank,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "$fixedCount bugs squashed & resolved",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF8B949E)
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFF00FF88).copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "🔥 Active Streak",
+                                    color = Color(0xFF00FF88),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. At-a-Glance Metrics
             item {
                 Column {
                     Text(
-                        text = "TRIAGE & HEALTH",
+                        text = "PROJECT HEALTH",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold
@@ -203,7 +371,7 @@ fun HomeScreen(
                 }
             }
 
-            // 4. Local Diagnostic Insights Banner (Αἰτία)
+            // 6. Local Diagnostic Insights Banner (Αἰτία)
             if (uiState.insights.isNotEmpty()) {
                 val primaryInsight = uiState.insights.first()
                 item {
@@ -257,7 +425,7 @@ fun HomeScreen(
                 }
             }
 
-            // 5. Pinned Issues (if any)
+            // 7. Pinned Issues (if any)
             if (uiState.pinnedIssues.isNotEmpty()) {
                 item {
                     Column {
@@ -294,7 +462,7 @@ fun HomeScreen(
                 }
             }
 
-            // 6. Recent Activity Stream
+            // 8. Recent Activity Stream
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -302,7 +470,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "RECENT ACTIVITY",
+                        text = "RECENT TICKETS",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold
@@ -343,6 +511,10 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+    }
+
+    if (showTourDialog) {
+        FeatureTourDialog(onDismiss = { showTourDialog = false })
     }
 }
 

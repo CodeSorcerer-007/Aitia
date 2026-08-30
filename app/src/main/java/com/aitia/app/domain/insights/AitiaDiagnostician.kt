@@ -4,6 +4,7 @@ data class DiagnosisAdvice(
     val exceptionType: String,
     val title: String,
     val rootCauseSummary: String,
+    val plainEnglishExplanation: String = "",
     val commonPitfalls: List<String>,
     val recommendedFixCode: String,
     val severityLevel: String = "High"
@@ -16,6 +17,7 @@ object AitiaDiagnostician {
             exceptionType = "java.lang.NullPointerException",
             title = "Null Pointer Dereference",
             rootCauseSummary = "Attempted to access a method or property on an object reference that evaluates to null at runtime.",
+            plainEnglishExplanation = "The app reached for something in memory that didn't exist yet (like trying to read a username before the user typed it), so it panicked and stopped.",
             commonPitfalls = listOf(
                 "Interoperating with Java libraries without explicit @Nullable / @NonNull annotations.",
                 "Using the force-unwrap operator (!!) on nullable StateFlow or ViewModel state.",
@@ -35,6 +37,7 @@ userProfile?.let { profile ->
             exceptionType = "java.lang.SecurityException",
             title = "Security Exception / Missing Permission",
             rootCauseSummary = "The application attempted to perform a protected operation (such as opening Camera, recording audio, accessing fine location, or posting notifications) without the requisite runtime permission or AndroidManifest declaration.",
+            plainEnglishExplanation = "Android locked the door because the app didn't ask the user for permission first (e.g. using the camera or microphone).",
             commonPitfalls = listOf(
                 "Missing <uses-permission> in AndroidManifest.xml.",
                 "Targeting Android 13+ (API 33) without requesting runtime POST_NOTIFICATIONS permission.",
@@ -57,6 +60,7 @@ if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == Pa
             exceptionType = "kotlin.UninitializedPropertyAccessException",
             title = "Lateinit Property Not Initialized",
             rootCauseSummary = "A lateinit var was accessed before an initial assignment occurred in the lifecycle.",
+            plainEnglishExplanation = "You promised Kotlin you'd set this variable before using it (using 'lateinit'), but your code tried to read it too early.",
             commonPitfalls = listOf(
                 "Accessing injected dependencies before Dagger/Hilt/Koin graph injection completes.",
                 "Referencing lateinit adapter/viewBinding inside companion object or before onViewCreated().",
@@ -76,6 +80,7 @@ if (::myRepository.isInitialized) {
             exceptionType = "java.util.ConcurrentModificationException",
             title = "Collection Modified During Iteration",
             rootCauseSummary = "A non-thread-safe collection (e.g. ArrayList, HashMap) was modified while being iterated over.",
+            plainEnglishExplanation = "One part of your code was looping through a list while another background worker added or deleted items from it at the exact same moment.",
             commonPitfalls = listOf(
                 "Calling list.remove() or list.add() inside a standard for-each loop.",
                 "Mutating a shared List state concurrently across background Dispatchers.IO and Dispatchers.Main."
@@ -93,6 +98,7 @@ val safeList = CopyOnWriteArrayList<Item>()
             exceptionType = "android.os.NetworkOnMainThreadException",
             title = "Blocking Network Call on Main (UI) Thread",
             rootCauseSummary = "An HTTP request, socket connection, or DNS lookup was triggered synchronously on the Android main thread, violating strict mode and causing ANR.",
+            plainEnglishExplanation = "The phone tried to download data directly on the screen thread, which would freeze the screen for the user. Android blocked it instantly to keep the UI smooth.",
             commonPitfalls = listOf(
                 "Invoking OkHttp client.newCall().execute() directly in ViewModel or Composable.",
                 "Synchronous database or URL read inside Application.onCreate()."
@@ -113,6 +119,7 @@ suspend fun fetchApiData(): Result<Data> = withContext(Dispatchers.IO) {
             exceptionType = "java.lang.OutOfMemoryError",
             title = "Heap Memory Exhaustion (OOM)",
             rootCauseSummary = "The application allocated more heap memory than allowed by the Android OS process limit (typically due to uncompressed Bitmaps or memory leaks).",
+            plainEnglishExplanation = "The app tried to hold too much data in RAM (usually giant uncompressed camera photos or leaked screens), running out of room.",
             commonPitfalls = listOf(
                 "Decoding large raw camera Bitmaps into memory without downsampling (inSampleSize).",
                 "Holding static references to Activity Context in singletons or static fields.",
@@ -133,6 +140,7 @@ val bitmap = BitmapFactory.decodeFile(filePath, options)
             exceptionType = "android.os.TransactionTooLargeException",
             title = "Binder IPC Buffer Overflow (> 1 MB)",
             rootCauseSummary = "Passed too much data (large Bitmap, heavy List, or serialized payload) in an Intent Bundle, Fragment arguments, or savedInstanceState.",
+            plainEnglishExplanation = "You tried to send a package bigger than Android's 1MB messenger limit between screens. Pass an ID instead of the whole object!",
             commonPitfalls = listOf(
                 "Passing raw byte arrays or Bitmaps in Intent.putExtra().",
                 "Saving entire database lists in rememberSaveable or onSaveInstanceState()."
@@ -149,6 +157,7 @@ val intent = Intent(context, DetailActivity::class.java).apply {
             exceptionType = "android.database.sqlite.SQLiteConstraintException",
             title = "Room Database Constraint Violation",
             rootCauseSummary = "Attempted to insert duplicate unique keys, violate foreign key relationships, or insert null into a NOT NULL column in Room.",
+            plainEnglishExplanation = "The local database rejected your save because a rule was broken (like saving a ticket for a project that doesn't exist, or saving duplicate IDs).",
             commonPitfalls = listOf(
                 "Inserting child entity with a foreign key pointing to a non-existent parent ID.",
                 "Missing OnConflictStrategy.REPLACE or OnConflictStrategy.IGNORE on @Insert DAO."
@@ -164,6 +173,7 @@ suspend fun upsertIssue(issue: IssueEntity): Long
             exceptionType = "kotlinx.coroutines.JobCancellationException",
             title = "Coroutine Scope Cancelled Prematurely",
             rootCauseSummary = "A running coroutine was cancelled (e.g. ViewModel was cleared or parent job failed), but an active child job did not handle cancellation cooperatively.",
+            plainEnglishExplanation = "The background task was stopped normally (like when the user left the screen), but a try/catch accidentally swallowed the stop signal.",
             commonPitfalls = listOf(
                 "Catching generic Exception and swallowing CancellationException inside try-catch.",
                 "Using GlobalScope instead of viewModelScope / lifecycleScope."
