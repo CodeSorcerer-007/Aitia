@@ -3,17 +3,15 @@ package com.aitia.app.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitia.app.data.preferences.UserPreferencesRepository
-import com.aitia.app.domain.repository.IssueRepository
-import com.aitia.app.domain.repository.ProjectRepository
-import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.insights.InsightEngine
 import com.aitia.app.domain.model.AnalyticsSummary
 import com.aitia.app.domain.model.InsightItem
 import com.aitia.app.domain.model.Issue
-import com.aitia.app.domain.model.IssueType
 import com.aitia.app.domain.model.Project
 import com.aitia.app.domain.model.TestingSession
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
+import com.aitia.app.domain.repository.TestingSessionRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -23,6 +21,7 @@ import kotlinx.coroutines.launch
 data class HomeUiState(
     val recentIssues: List<Issue> = emptyList(),
     val pinnedIssues: List<Issue> = emptyList(),
+    val allIssues: List<Issue> = emptyList(),
     val activeSession: TestingSession? = null,
     val analyticsSummary: AnalyticsSummary = AnalyticsSummary(),
     val insights: List<InsightItem> = emptyList(),
@@ -41,18 +40,22 @@ class HomeViewModel(
         combine(
             issueRepository.getActiveIssues(),
             issueRepository.getPinnedIssues(),
-            sessionRepository.getActiveSession()
-        ) { active, pinned, session -> Triple(active, pinned, session) },
+            issueRepository.getAllIssues()
+        ) { active, pinned, all -> Triple(active, pinned, all) },
         combine(
+            sessionRepository.getActiveSession(),
             issueRepository.getAnalyticsSummary(),
             sessionRepository.getAllSessions(),
             projectRepository.getAllProjects()
-        ) { analytics, allSessions, projects -> Triple(analytics, allSessions, projects) }
-    ) { (activeIssues, pinned, activeSession), (analytics, allSessions, projects) ->
+        ) { activeSession, analytics, allSessions, projects ->
+            Quad(activeSession, analytics, allSessions, projects)
+        }
+    ) { (activeIssues, pinned, allIssues), (activeSession, analytics, allSessions, projects) ->
         val insights = InsightEngine.generateInsights(activeIssues, allSessions)
         HomeUiState(
             recentIssues = activeIssues.take(6),
             pinnedIssues = pinned,
+            allIssues = allIssues,
             activeSession = activeSession,
             analyticsSummary = analytics,
             insights = insights,
@@ -72,3 +75,10 @@ class HomeViewModel(
         }
     }
 }
+
+private data class Quad<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)

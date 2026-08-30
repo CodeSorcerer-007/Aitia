@@ -138,7 +138,9 @@ import com.aitia.app.ui.theme.MonospaceCode
 import com.aitia.app.ui.theme.StatusFixed
 import com.aitia.app.util.DateFormatter
 import com.aitia.app.util.ShareHelper
+import com.aitia.app.util.SoundEffectHelper
 import com.aitia.app.util.rememberHapticFeedback
+import androidx.compose.runtime.rememberCoroutineScope
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -151,6 +153,7 @@ fun IssueDetailScreen(
 ) {
     val context = LocalContext.current
     val haptic = rememberHapticFeedback()
+    val scope = rememberCoroutineScope()
     val extendedColors = LocalExtendedColors.current
 
     LaunchedEffect(issueId) {
@@ -384,6 +387,7 @@ fun IssueDetailScreen(
                                 viewModel.updateStatus(newStatus)
                                 if (newStatus == IssueStatus.FIXED || newStatus == IssueStatus.VERIFIED) {
                                     haptic.success()
+                                    SoundEffectHelper.playCelebrationChime(scope)
                                     showConfetti = true
                                     showResolutionPrompt = true
                                     Toast.makeText(context, "🎉 Bug Squashed! Great job!", Toast.LENGTH_SHORT).show()

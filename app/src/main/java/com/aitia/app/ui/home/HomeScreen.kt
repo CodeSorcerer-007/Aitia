@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import com.aitia.app.domain.model.InsightType
 import com.aitia.app.domain.model.Issue
 import com.aitia.app.domain.model.IssueType
+import com.aitia.app.ui.components.AchievementBadgeDialog
 import com.aitia.app.ui.components.ActiveSessionBanner
 import com.aitia.app.ui.components.AitiaTopAppBar
 import com.aitia.app.ui.components.EmptyStateView
@@ -92,6 +93,7 @@ fun HomeScreen(
     val extendedColors = LocalExtendedColors.current
     val haptic = rememberHapticFeedback()
     var showTourDialog by remember { mutableStateOf(false) }
+    var showTrophyDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -252,7 +254,11 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, Color(0xFF00FF88).copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                        .border(1.dp, Color(0xFF00FF88).copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                        .clickable {
+                            haptic.lightTap()
+                            showTrophyDialog = true
+                        },
                     color = Color(0xFF0F1A15)
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -278,10 +284,11 @@ fun HomeScreen(
                             }
 
                             Text(
-                                text = "100% Offline & Private 🛡️",
+                                text = "🏆 View Trophies",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF8B949E),
-                                fontSize = 10.sp
+                                color = Color(0xFFFFB703),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
                             )
                         }
 
@@ -515,6 +522,13 @@ fun HomeScreen(
 
     if (showTourDialog) {
         FeatureTourDialog(onDismiss = { showTourDialog = false })
+    }
+
+    if (showTrophyDialog) {
+        AchievementBadgeDialog(
+            allIssues = uiState.allIssues,
+            onDismiss = { showTrophyDialog = false }
+        )
     }
 }
 

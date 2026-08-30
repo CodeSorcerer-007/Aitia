@@ -3,10 +3,7 @@ package com.aitia.app.ui.quickcapture
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aitia.app.data.preferences.UserPreferencesRepository
-import com.aitia.app.domain.repository.EnvironmentRepository
-import com.aitia.app.domain.repository.IssueRepository
-import com.aitia.app.domain.repository.ProjectRepository
-import com.aitia.app.domain.repository.TestingSessionRepository
+import com.aitia.app.domain.insights.SmartAutoTriageEngine
 import com.aitia.app.domain.model.EnvironmentProfile
 import com.aitia.app.domain.model.Issue
 import com.aitia.app.domain.model.IssueStatus
@@ -14,6 +11,10 @@ import com.aitia.app.domain.model.IssueType
 import com.aitia.app.domain.model.Priority
 import com.aitia.app.domain.model.Project
 import com.aitia.app.domain.model.TestingSession
+import com.aitia.app.domain.repository.EnvironmentRepository
+import com.aitia.app.domain.repository.IssueRepository
+import com.aitia.app.domain.repository.ProjectRepository
+import com.aitia.app.domain.repository.TestingSessionRepository
 import com.aitia.app.domain.similarity.DuplicateDetectionEngine
 import com.aitia.app.domain.similarity.DuplicateMatch
 import kotlinx.coroutines.Job
@@ -133,6 +134,13 @@ class QuickCaptureViewModel(
             preferencesRepository.setQuickCaptureDraft(newTitle)
         }
 
+        // Real-time smart auto-triage
+        if (newTitle.length >= 4) {
+            val triageResult = SmartAutoTriageEngine.triage(newTitle)
+            _type.value = triageResult.suggestedType
+            _priority.value = triageResult.suggestedPriority
+        }
+
         // Debounced duplicate detection
         duplicateCheckJob?.cancel()
         duplicateCheckJob = viewModelScope.launch {
@@ -176,6 +184,7 @@ class QuickCaptureViewModel(
         viewModelScope.launch {
             _isSaving.value = true
             val activeSession = sessionRepository.getActiveSession().first()
+            val triageResult = SmartAutoTriageEngine.triage(titleText)
 
             val newIssue = Issue(
                 projectId = _selectedProjectId.value,
@@ -184,6 +193,7 @@ class QuickCaptureViewModel(
                 priority = _priority.value,
                 status = IssueStatus.OPEN,
                 screen = _screenArea.value.trim(),
+                stepsToReproduce = triageResult.suggestedInitialSteps,
                 environmentId = _selectedEnvironmentId.value,
                 testingSessionId = activeSession?.id,
                 createdAt = Instant.now(),
@@ -191,6 +201,12 @@ class QuickCaptureViewModel(
             )
 
             val newId = issueRepository.saveIssue(newIssue)
+
+            // Auto-tag with suggested tags
+            triageResult.suggestedTags.forEach { tag ->
+                issueRepository.addTagToIssue(newId, tag)
+            }
+
             // Clear draft
             preferencesRepository.setQuickCaptureDraft("")
             _title.value = ""
