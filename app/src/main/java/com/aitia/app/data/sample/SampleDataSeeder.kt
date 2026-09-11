@@ -17,8 +17,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class SampleDataSeeder(private val database: AitiaDatabase) {
+@Singleton
+class SampleDataSeeder @Inject constructor(private val database: AitiaDatabase) {
 
     suspend fun seedSampleData() = withContext(Dispatchers.IO) {
         val now = Instant.now()

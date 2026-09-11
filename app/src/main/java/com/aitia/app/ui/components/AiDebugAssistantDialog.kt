@@ -95,6 +95,9 @@ fun AiDebugAssistantDialog(
         mutableStateListOf<AiChatMessage>()
     }
 
+    var userInput by remember { mutableStateOf("") }
+    var isThinking by remember { mutableStateOf(false) }
+
     LaunchedEffect(issue) {
         if (messages.isEmpty()) {
             isThinking = true
@@ -102,9 +105,6 @@ fun AiDebugAssistantDialog(
             isThinking = false
         }
     }
-
-    var userInput by remember { mutableStateOf("") }
-    var isThinking by remember { mutableStateOf(false) }
 
     fun sendMessage(query: String) {
         if (query.isBlank()) return

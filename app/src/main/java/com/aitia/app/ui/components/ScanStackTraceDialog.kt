@@ -68,6 +68,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.InputStream
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 
 @Composable
 fun ScanStackTraceDialog(

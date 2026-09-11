@@ -180,7 +180,7 @@ object LocalAiDebugAssistant {
         val queryLower = userQuery.lowercase()
         val diagnosis = AitiaDiagnostician.diagnose(issue.exceptionType, "${issue.errorMessage} ${issue.technicalDetails}")
 
-        return when {
+        when {
             queryLower.contains("test") || queryLower.contains("unit test") || queryLower.contains("mock") -> {
                 generateUnitTest(issue)
             }

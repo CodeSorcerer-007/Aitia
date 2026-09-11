@@ -163,13 +163,13 @@ fun IssueDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val issue = uiState.issue
 
-    val notes by viewModel.getNotesFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
-    val attachments by viewModel.getAttachmentsFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
-    val checklist by viewModel.getChecklistFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
-    val relatedIssues by viewModel.getRelatedFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
-    val timeline by viewModel.getTimelineFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
-    val tags by viewModel.getTagsFlow(issueId).collectAsStateWithLifecycle(initial = emptyList())
-    val allTags by viewModel.getAllTagsFlow().collectAsStateWithLifecycle(initial = emptyList())
+    val notes by viewModel.getNotesFlow(issueId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val attachments by viewModel.getAttachmentsFlow(issueId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val checklist by viewModel.getChecklistFlow(issueId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val relatedIssues by viewModel.getRelatedFlow(issueId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val timeline by viewModel.getTimelineFlow(issueId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val tags by viewModel.getTagsFlow(issueId).collectAsStateWithLifecycle(initialValue = emptyList())
+    val allTags by viewModel.getAllTagsFlow().collectAsStateWithLifecycle(initialValue = emptyList())
     
     val allIssues by viewModel.allIssuesFlow.collectAsStateWithLifecycle()
     val projects by viewModel.projectsFlow.collectAsStateWithLifecycle()
